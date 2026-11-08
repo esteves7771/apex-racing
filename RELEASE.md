@@ -1,6 +1,6 @@
 # APEX v0.5.1 public playtest
 
-Clean source-only release of the verified v0.5.1 snapshot. All 82 game/source/test files match that snapshot after line-ending normalization. No gameplay, physics, AI, camera, audio or save-format changes were made for publication. Locked dependency versions are unchanged.
+Clean source-only release of the verified v0.5.1 snapshot. All 82 game/source/test files match that snapshot after line-ending normalization. No gameplay, physics, AI, camera, audio or save-format changes were made for publication. Runtime dependency versions are unchanged. Explicit pinned Node 24 development type declarations were added for clean-runner reproducibility.
 
 ## Public preparation
 
@@ -20,3 +20,6 @@ Production Chrome smoke at the repository subpath: no runtime errors, failed req
 ## Limits
 
 Deployment/public-browser verification is recorded after publication. These smoke checks do not complete full races, establish personal-best record persistence, benchmark performance, or assess music by listening. The underlying v0.5.1 was previously verified with full races; public full-race completion, other browsers/GPUs, long sessions, high-speed camera comfort and speaker/headphone balance still require manual playtesting. Public and local origins have separate browser saves.
+
+The first GitHub run exposed undeclared Node types used by tests (local ancestor directories had masked this dependency). The public package now declares @types/node explicitly. No runtime bundle content changed.
+

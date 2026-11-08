@@ -1,0 +1,5 @@
+Copyright (c) 2026. All rights reserved.
+
+APEX game source, original artwork and original audio are proprietary. No open-source license is granted. Public availability does not grant permission to redistribute, modify, sublicense or commercially use these materials. Rights arising under applicable law are unaffected.
+
+Third-party dependencies retain their respective licenses. See THIRD_PARTY_NOTICES.txt for bundled runtime dependency notices.

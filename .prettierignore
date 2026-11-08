@@ -1,0 +1,6 @@
+node_modules
+dist
+test-results
+package-lock.json
+APEX_PHASE1_SPEC.md
+CODEX_MASTER_PROMPT.md

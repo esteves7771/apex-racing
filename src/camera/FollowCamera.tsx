@@ -1,3 +1,4 @@
+import { useTouchDevice } from '../input/device';
 import { trackId, coast, nearestTrack } from '../track/ActiveTrack';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef } from 'react';
@@ -9,7 +10,8 @@ import { FRAME_ORDER } from '../render/frameOrder';
 import { cameraBlend } from './smoothing';
 import { usePhysicsDebug } from '../vehicle/physicsDiagnostics';
 export function FollowCamera() {
-  const { camera } = useThree(),
+  const touch = useTouchDevice();
+  const { camera, size } = useThree(),
     look = useRef(new THREE.Vector3()),
     initialized = useRef(false),
     time = useRef(0),
@@ -64,7 +66,8 @@ export function FollowCamera() {
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = THREE.MathUtils.damp(
         camera.fov,
-        settings.reducedMotion ? 48 : 48 + Math.min(6, Math.abs(telemetry.speed) * 0.14),
+        (touch && size.width / size.height < 1.8 ? 55 : 48) +
+          (settings.reducedMotion ? 0 : Math.min(6, Math.abs(telemetry.speed) * 0.14)),
         3,
         dt,
       );

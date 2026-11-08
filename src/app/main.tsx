@@ -1,3 +1,5 @@
+import { ImmersiveShell } from '../ui/ImmersiveShell';
+import { TouchControls } from '../ui/TouchControls';
 import React, { useState, useCallback, useEffect, Component, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Scene } from '../render/Scene';
@@ -42,7 +44,10 @@ function App() {
       <Scene onReady={onReady} />
       {ready ? (
         <>
-          <Interface />
+          <ImmersiveShell>
+            <Interface />
+            <TouchControls />
+          </ImmersiveShell>
           {import.meta.env.DEV && <PhysicsDebugToggle />}
         </>
       ) : (

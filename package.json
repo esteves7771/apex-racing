@@ -1,6 +1,6 @@
 {
   "name": "apex-racing",
-  "version": "0.5.1",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,9 +9,16 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "pretest": "node scripts/prepare-tests.mjs",
     "check": "node scripts/check.mjs",
     "test:pages": "node scripts/pages-smoke.mjs",
-    "pretest": "node scripts/prepare-tests.mjs"
+    "test:mobile": "node scripts/mobile-browser-test.mjs",
+    "test:mobile-production": "node scripts/mobile-production-smoke.mjs",
+    "test:vehicles": "node scripts/vehicle-lifecycle.mjs after",
+    "test:immersive": "node scripts/immersive-browser-test.mjs",
+    "test:styles": "node scripts/style-regression.mjs",
+    "test:ai-benchmark": "node scripts/ai-benchmark.mjs",
+    "test:pages-manifest": "node scripts/immersive-pages-test.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.4.0",

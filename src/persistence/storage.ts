@@ -20,7 +20,9 @@ export const recordKey = (mode: Mode, vehicle: VehicleId, layout = activeLayoutI
 export const STORAGE_KEY = 'apex.v2';
 export interface Settings {
   color: string;
-  quality: 'high' | 'low';
+  quality: 'auto' | 'high' | 'medium' | 'low';
+  steeringSensitivity: number;
+  immersiveWelcome: boolean;
   reducedMotion: boolean;
   master: number;
   sfx: number;
@@ -55,7 +57,9 @@ export const defaults: Save = {
   gpRecords: {},
   settings: {
     color: '#f6d35e',
-    quality: 'high',
+    quality: 'auto',
+    steeringSensitivity: 1,
+    immersiveWelcome: true,
     reducedMotion: false,
     master: 0.35,
     sfx: 0.6,
@@ -98,8 +102,10 @@ export function readSave(storage: Pick<Storage, 'getItem'> | undefined): Save {
     for (const id of ['sprinter', 'vortex', 'bolt'] as const)
       if (vehiclePalette.includes(s.colors?.[id])) result.settings.colors[id] = s.colors[id];
     if (s.effects === 'low') result.settings.effects = 'low';
-    if (s.quality === 'low') result.settings.quality = 'low';
-    for (const k of ['reducedMotion', 'controlsSeen', 'muted'] as const)
+    if (['auto', 'low', 'medium', 'high'].includes(s.quality)) result.settings.quality = s.quality;
+    if (typeof s.steeringSensitivity === 'number' && Number.isFinite(s.steeringSensitivity))
+      result.settings.steeringSensitivity = Math.max(0.5, Math.min(1.5, s.steeringSensitivity));
+    for (const k of ['reducedMotion', 'controlsSeen', 'muted', 'immersiveWelcome'] as const)
       if (typeof s[k] === 'boolean') result.settings[k] = s[k];
     for (const k of ['master', 'sfx', 'music', 'vehicleVolume', 'ambient'] as const)
       if (typeof s[k] === 'number' && Number.isFinite(s[k]))

@@ -13,7 +13,7 @@ import { CarVisual } from './CarVisual';
 import { applyVehicleCommand } from './VehicleDynamics';
 import { capturePhysicsStep, physicsDiagnostics, usePhysicsDebug } from './physicsDiagnostics';
 import { chassisPhysics, vehicleSpawn } from './physicsGeometry';
-import { controls, keys } from '../input/keyboard';
+import { drivingInput } from '../input/keyboard';
 import { race, telemetry, useGame, saveRecords } from '../game/store';
 import {
   poseAt,
@@ -183,7 +183,7 @@ export function ArcadeVehicleController() {
     telemetry.groundPitch = Math.atan(
       -(probe.normal.x * f.x + probe.normal.z * f.z) / probe.normal.y,
     );
-    const input = controls(keys),
+    const input = drivingInput(),
       next = applyVehicleCommand(
         b,
         definition,

@@ -1,3 +1,4 @@
+import { shaderSnapshot } from '../render/ShaderWarmup';
 import { useLayoutEffect, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { CuboidCollider, RigidBody, useRapier } from '@react-three/rapier';
@@ -88,7 +89,7 @@ function paintedKerb(side: number) {
 }
 const kerbs = [paintedKerb(-1), paintedKerb(1)];
 
-function PrepareCoastShaders() {
+function PrepareCoastShaders({ qualityKey }: { qualityKey: string }) {
   const { gl, scene, camera } = useThree();
   useEffect(() => {
     let mounted = true;
@@ -96,8 +97,9 @@ function PrepareCoastShaders() {
     scene.userData.coastShaderPreparation = { status: 'preparing' };
     // Prepare off-screen materials during selection/countdown, before their first racing view.
     // Three uses parallel compilation support; shader diagnostics remain enabled.
+    const preparation = shaderSnapshot(scene);
     void gl
-      .compileAsync(scene, camera)
+      .compileAsync(preparation.scene, camera)
       .then(() => {
         if (mounted)
           scene.userData.coastShaderPreparation = {
@@ -105,17 +107,18 @@ function PrepareCoastShaders() {
             milliseconds: performance.now() - start,
           };
       })
-      .catch((error) => console.error('Coral shader preparation failed', error));
+      .catch((error) => console.error('Coral shader preparation failed', error))
+      .finally(() => preparation.dispose());
     return () => {
       mounted = false;
     };
-  }, [gl, scene, camera]);
+  }, [gl, scene, camera, qualityKey]);
   return null;
 }
-export function CoastWorld() {
+export function CoastWorld({ qualityKey = 'high' }: { qualityKey?: string }) {
   return (
     <>
-      <PrepareCoastShaders />
+      <PrepareCoastShaders qualityKey={qualityKey} />
       <GroundColliders road={coastRoad} terrain={coastTerrain} />
       <TunnelCollider />
       <mesh geometry={coastRoad} receiveShadow>

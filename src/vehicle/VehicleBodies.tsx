@@ -1,28 +1,38 @@
+import { extend, type ThreeElement } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { MutableRefObject } from 'react';
 import type { VehicleId } from './VehicleRegistry';
 // Flat-shaded wedge with a rising shoulder line; front is always -Z.
-export function makeWedge() {
-  const shape = new THREE.Shape();
-  shape.moveTo(-1.75, 0);
-  shape.lineTo(1.75, 0);
-  shape.lineTo(1.6, 0.53);
-  shape.lineTo(-1.6, 0.26);
-  shape.closePath();
-  const g = new THREE.ExtrudeGeometry(shape, {
-    depth: 1.78,
-    bevelEnabled: true,
-    bevelSegments: 1,
-    steps: 1,
-    bevelSize: 0.06,
-    bevelThickness: 0.06,
-  });
-  g.rotateY(-Math.PI / 2);
-  g.translate(0.89, 0.23, 0);
-  g.computeVertexNormals();
-  return g;
+export class WedgeGeometry extends THREE.ExtrudeGeometry {
+  constructor() {
+    const shape = new THREE.Shape();
+    shape.moveTo(-1.75, 0);
+    shape.lineTo(1.75, 0);
+    shape.lineTo(1.6, 0.53);
+    shape.lineTo(-1.6, 0.26);
+    shape.closePath();
+    super(shape, {
+      depth: 1.78,
+      bevelEnabled: true,
+      bevelSegments: 1,
+      steps: 1,
+      bevelSize: 0.06,
+      bevelThickness: 0.06,
+    });
+    this.rotateY(-Math.PI / 2);
+    this.translate(0.89, 0.23, 0);
+    this.computeVertexNormals();
+  }
 }
-const wedge = makeWedge();
+export function makeWedge() {
+  return new WedgeGeometry();
+}
+extend({ WedgeGeometry });
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    wedgeGeometry: ThreeElement<typeof WedgeGeometry>;
+  }
+}
 export function VehicleBody({
   id,
   color,
@@ -41,7 +51,8 @@ export function VehicleBody({
           <meshStandardMaterial color={color} roughness={0.42} />
         </mesh>
       ) : (
-        <mesh geometry={wedge} castShadow>
+        <mesh castShadow>
+          <wedgeGeometry />
           <meshStandardMaterial color={color} roughness={0.32} />
         </mesh>
       )}

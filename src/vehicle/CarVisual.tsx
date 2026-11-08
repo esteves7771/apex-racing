@@ -1,15 +1,17 @@
 import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, extend, type ThreeElement } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { telemetry, useGame } from '../game/store';
 import { wheelAngularSpeed } from './wheelAnimation';
 import { VehicleBody } from './VehicleBodies';
 import { getVehicle, type VehicleId } from './VehicleRegistry';
-const bodyGeometry = new RoundedBoxGeometry(1.78, 0.58, 3.65, 3, 0.16);
-const cabinGeometry = new RoundedBoxGeometry(1.48, 0.67, 1.65, 3, 0.16);
-const bumperGeometry = new RoundedBoxGeometry(1.85, 0.22, 0.25, 2, 0.08);
-const archGeometry = new THREE.TorusGeometry(0.43, 0.055, 5, 14, Math.PI);
+extend({ RoundedBoxGeometry });
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    roundedBoxGeometry: ThreeElement<typeof RoundedBoxGeometry>;
+  }
+}
 export function CarVisual({
   preview = false,
   id,
@@ -97,13 +99,15 @@ export function CarVisual({
     <group name="bodyRoot">
       <group ref={body} name="visualBody">
         {selected !== 'sprinter' ? (
-          <VehicleBody id={selected} color={color} brakes={brakes} />
+          <VehicleBody key={selected} id={selected} color={color} brakes={brakes} />
         ) : (
           <>
-            <mesh geometry={bodyGeometry} position={[0, 0.46, 0]} castShadow>
+            <mesh position={[0, 0.46, 0]} castShadow>
+              <roundedBoxGeometry args={[1.78, 0.58, 3.65, 3, 0.16]} />
               <meshStandardMaterial color={color} roughness={0.38} />
             </mesh>
-            <mesh geometry={cabinGeometry} name="windshield" position={[0, 1.01, 0.22]} castShadow>
+            <mesh name="windshield" position={[0, 1.01, 0.22]} castShadow>
+              <roundedBoxGeometry args={[1.48, 0.67, 1.65, 3, 0.16]} />
               <meshStandardMaterial color="#254a56" metalness={0.2} roughness={0.28} />
             </mesh>
             <mesh position={[0, 1.36, 0.32]} castShadow>
@@ -133,12 +137,8 @@ export function CarVisual({
                   <meshStandardMaterial color={color} />
                 </mesh>
                 {[-1.16, 1.16].map((z) => (
-                  <mesh
-                    key={z}
-                    geometry={archGeometry}
-                    position={[s * 0.93, 0.04, z]}
-                    rotation={[0, Math.PI / 2, 0]}
-                  >
+                  <mesh key={z} position={[s * 0.93, 0.04, z]} rotation={[0, Math.PI / 2, 0]}>
+                    <torusGeometry args={[0.43, 0.055, 5, 14, Math.PI]} />
                     <meshStandardMaterial color="#31454a" roughness={0.8} />
                   </mesh>
                 ))}
@@ -188,7 +188,8 @@ export function CarVisual({
               <meshStandardMaterial color={color} />
             </mesh>
             {[-1, 1].map((s) => (
-              <mesh key={s} position={[0, 0.23, s * 1.8]} geometry={bumperGeometry}>
+              <mesh key={s} position={[0, 0.23, s * 1.8]}>
+                <roundedBoxGeometry args={[1.85, 0.22, 0.25, 2, 0.08]} />
                 <meshStandardMaterial color="#253d42" />
               </mesh>
             ))}

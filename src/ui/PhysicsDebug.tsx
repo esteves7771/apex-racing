@@ -26,6 +26,7 @@ export function PhysicsDebugToggle() {
     `${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)}`;
   return (
     <div
+      className="physics-debug-toggle"
       style={{
         position: 'absolute',
         right: 36,

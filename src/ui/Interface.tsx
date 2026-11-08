@@ -1,8 +1,9 @@
+import { useTouchDevice } from '../input/device';
 import { trackId, selectTrack, tracks, type TrackId } from '../track/ActiveTrack';
 import { useEffect, useState } from 'react';
 import { race, telemetry, useGame } from '../game/store';
 import { formatTime, type Mode } from '../game/RaceStateMachine';
-import { keys } from '../input/keyboard';
+import { clearDrivingInput } from '../input/keyboard';
 import { unlockAudio } from '../audio/engine';
 import {
   samples,
@@ -54,7 +55,7 @@ export function changeTrack(id: TrackId) {
 }
 export function startRace(mode: Mode) {
   if (mode === 'challenge' && trackId !== 'pine') changeTrack('pine');
-  keys.clear();
+  clearDrivingInput();
   unlockAudio();
   const settings = useGame.getState().save.settings;
   race.start(mode, { vehicle: settings.vehicle, difficulty: settings.difficulty });
@@ -62,6 +63,15 @@ export function startRace(mode: Mode) {
   useGame.getState().publish();
 }
 function Controls() {
+  const touch = useTouchDevice();
+  if (touch)
+    return (
+      <p>
+        Hold GO and a steering button together. BRAKE slows or reverses; DRIFT uses the handbrake.
+        CAM switches views, RESET returns to a valid checkpoint, and Ⅱ pauses. Landscape gives a
+        wider view.
+      </p>
+    );
   return (
     <div className="control-grid">
       <span>
@@ -97,12 +107,29 @@ function Settings() {
       <label>
         Graphics
         <select
+          aria-label="Graphics"
           value={s.quality}
-          onChange={(e) => settings({ quality: e.target.value as 'high' | 'low' })}
+          onChange={(e) =>
+            settings({ quality: e.target.value as 'auto' | 'high' | 'medium' | 'low' })
+          }
         >
+          <option value="auto">Auto · measured performance</option>
           <option value="high">High · shadows / 1.6× DPR</option>
+          <option value="medium">Medium · balanced / 1.25× DPR</option>
           <option value="low">Low · no shadows / 1× DPR</option>
         </select>
+      </label>
+      <label>
+        Touch steering sensitivity
+        <input
+          aria-label="Touch steering sensitivity"
+          type="range"
+          min="0.5"
+          max="1.5"
+          step="0.1"
+          value={s.steeringSensitivity}
+          onChange={(e) => settings({ steeringSensitivity: Number(e.target.value) })}
+        />
       </label>
       <label className="check">
         <input
@@ -166,6 +193,7 @@ function Settings() {
   );
 }
 export function Interface() {
+  const touch = useTouchDevice();
   const map = minimap(),
     mapPoints = map.points;
   useGame((s) => s.revision);
@@ -210,7 +238,7 @@ export function Interface() {
   }, [panel, cupSetup]);
   const quit = () => {
     race.phase = 'MENU';
-    keys.clear();
+    clearDrivingInput();
     setPanel(null);
     useGame.getState().publish();
   };
@@ -221,11 +249,16 @@ export function Interface() {
           APEX<span> / </span>
         </div>
         <span>APEX MOTOR CLUB</span>
-        <span className="version">LOCAL EDITION · 0.5.1</span>
+        <span className="version">LOCAL EDITION · 0.6.1</span>
       </header>
       {['MENU', 'MODE_SELECT'].includes(phase) && (
         <>
           <main className="menu">
+            {touch && phase === 'MODE_SELECT' && (
+              <p className="touch-intro">
+                Hold GO + steering together · landscape recommended. CAM changes view; Ⅱ pauses.
+              </p>
+            )}
             <div className="eyebrow">THREE PERSONALITIES. YOUR RACING LINE.</div>
             <h1>
               Find your
@@ -724,7 +757,7 @@ export function Interface() {
           </section>
         </div>
       )}
-      {phase === 'RACING' && tips && (
+      {phase === 'RACING' && tips && !touch && (
         <div className="first-controls glass">
           <strong>Your first run</strong>
           <p>

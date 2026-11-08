@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? '/apex-racing/' : '/',
   plugins: [react()],
+  server: { watch: { awaitWriteFinish: { stabilityThreshold: 250, pollInterval: 25 } } },
   build: {
     chunkSizeWarningLimit: 2400,
     rollupOptions: {

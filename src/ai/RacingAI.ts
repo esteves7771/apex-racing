@@ -1,5 +1,5 @@
 import { navAt, projectTrack, routeOffset, clamp, angle, signedDistance } from './TrackNavigation';
-import { TRACK_LENGTH, unsafeRoute } from '../track/ActiveTrack';
+import { TRACK_LENGTH, unsafeRoute, trackId, roadHeight } from '../track/ActiveTrack';
 import type { VehicleDefinition, VehicleId } from '../vehicle/VehicleRegistry';
 export type Difficulty = 'rookie' | 'club' | 'pro';
 export const difficulties = {
@@ -82,13 +82,29 @@ export interface Traffic {
 }
 export function cornerSpeed(t: number, car: VehicleDefinition, difficulty: Difficulty) {
   const d = difficulties[difficulty],
-    k = Math.abs(navAt(t).curvature);
+    at = navAt(t),
+    k = Math.abs(at.curvature);
+  const rise = (navAt(t + 6 / TRACK_LENGTH).y - 2 * at.y + navAt(t - 6 / TRACK_LENGTH).y) / 36;
+  const crestLimit = rise < -0.001 ? Math.sqrt(7 / -rise) : Infinity;
   // Available yaw authority as well as lateral grip limits the arcade turning radius.
-  const authority = car.handling.steering * 0.94 * d.corner;
+  const authority = car.handling.steering * 0.98 * d.corner;
+  // grip is lateral velocity damping (1/s), not a lateral acceleration ceiling.
+  // Limit equilibrium slip v^2*k/grip by difficulty; yaw authority remains a hard cap.
+  const slipBudget =
+    difficulty === 'pro'
+      ? trackId === 'pine'
+        ? 1.85
+        : 2.1
+      : difficulty === 'club'
+        ? trackId === 'pine'
+          ? 1.6
+          : 1.75
+        : 1.05;
   return Math.min(
     car.handling.maxSpeed * d.pace,
+    crestLimit,
     authority / (k + (authority * (car.handling.steeringFalloff ?? 0.48)) / car.handling.maxSpeed),
-    Math.sqrt((car.handling.grip * 0.98 * d.corner) / Math.max(k, 0.001)),
+    Math.sqrt((car.handling.grip * slipBudget * d.corner) / Math.max(k, 0.001)),
   );
 }
 export function plannedSpeed(
@@ -99,10 +115,18 @@ export function plannedSpeed(
 ) {
   let limit = cornerSpeed(t, car, difficulty);
   const decel = car.handling.braking * difficulties[difficulty].braking * braking;
-  for (let distance = 4; distance <= 110; distance += 4) {
+  for (let distance = 4; distance <= 140; distance += 4) {
     const ahead = (t + distance / TRACK_LENGTH) % 1,
       v = cornerSpeed(ahead, car, difficulty);
-    limit = Math.min(limit, Math.sqrt(v * v + 2 * decel * Math.max(0, distance - 5)));
+    limit = Math.min(
+      limit,
+      Math.sqrt(
+        v * v +
+          2 *
+            decel *
+            Math.max(0, distance - (difficulty === 'pro' ? 2 : difficulty === 'club' ? 4 : 7)),
+      ),
+    );
   }
   if (unsafeRoute(t)) limit = Math.min(limit, 24);
   return Math.max(6.5, limit);
@@ -119,8 +143,10 @@ export class RacingAI {
   lookahead = 0;
   decision = 0;
   commit = 0;
+  passingId?: string;
   stuck = 0;
   recovery = 0;
+  belowRoad = 0;
   cooldown = 0;
   resets = 0;
   costMs = 0;
@@ -145,8 +171,10 @@ export class RacingAI {
     this.steer = 0;
     this.decision = 0;
     this.commit = 0;
+    this.passingId = undefined;
     this.stuck = 0;
     this.recovery = 0;
+    this.belowRoad = 0;
     this.cooldown = 0;
     this.state = 'GRID';
     this.clock = 0;
@@ -159,6 +187,7 @@ export class RacingAI {
   update(
     input: {
       x: number;
+      y?: number;
       z: number;
       yaw: number;
       speed: number;
@@ -172,6 +201,10 @@ export class RacingAI {
       projection = projectTrack(input.x, input.z, this.t);
     this.t = projection.t;
     this.lateral = projection.lateral;
+    this.belowRoad =
+      input.y !== undefined && input.y < roadHeight(this.t, this.lateral) - 3
+        ? this.belowRoad + dt
+        : 0;
     this.clock += dt;
     this.commit = Math.max(0, this.commit - dt);
     this.cooldown = Math.max(0, this.cooldown - dt);
@@ -182,113 +215,126 @@ export class RacingAI {
       this.decision = d.reaction;
       this.speedTarget = plannedSpeed(this.t, this.car, this.difficulty, this.rival.braking);
       const unsafe = unsafeRoute(this.t),
-        curve = Math.abs(navAt(this.t + 0.012).curvature);
+        curve = Math.abs(navAt(this.t + 35 / TRACK_LENGTH).curvature);
       const nearby = traffic.filter(
-        (o) => o.id !== this.rival.id && Math.hypot(input.x - o.x, input.z - o.z) < 45,
+        (o) => o.id !== this.rival.id && Math.hypot(input.x - o.x, input.z - o.z) < 85,
       );
-      const ahead = nearby
-        .filter((o) => {
-          const gap = signedDistance(this.t!, o.t);
-          return gap > 0 && gap < 30 && Math.abs(o.lateral - this.lateral) < 2.3;
-        })
-        .sort((a, b) => signedDistance(this.t!, a.t) - signedDistance(this.t!, b.t))[0];
       const currentCurve = navAt(this.t).curvature,
-        comingCurve = navAt(this.t + 0.012).curvature;
+        comingCurve = navAt(this.t + 35 / TRACK_LENGTH).curvature;
       let desired =
         this.rival.lane +
-        (this.t > 0.05 && this.t < 0.95
-          ? clamp((comingCurve - currentCurve) * 20, -0.35, 0.35)
-          : 0);
+        clamp(
+          (comingCurve - currentCurve * 1.5) *
+            (this.difficulty === 'pro' ? 70 : this.difficulty === 'club' ? 50 : 15),
+          -1.1,
+          1.1,
+        );
+      const passing = nearby.find((o) => o.id === this.passingId);
+      if (this.commit > 0 && (!passing || signedDistance(this.t, passing.t) < -8)) {
+        this.commit = 0;
+        this.passingId = undefined;
+      }
+      let yielded = false;
       if (
         this.commit > 0 &&
         nearby.some(
           (o) =>
-            Math.abs(signedDistance(this.t!, o.t)) < 12 &&
+            o.id !== this.passingId &&
+            signedDistance(this.t!, o.t) > -8 &&
+            signedDistance(this.t!, o.t) < 35 &&
             Math.abs(o.lateral - this.desiredOffset) < 2.2,
         )
       ) {
         this.commit = 0;
-        this.desiredOffset = this.rival.lane;
+        this.passingId = undefined;
+        this.desiredOffset = this.offset;
         this.state = 'YIELD';
+        yielded = true;
       }
+      const ahead = nearby
+        .filter((o) => {
+          const gap = signedDistance(this.t!, o.t);
+          return gap > 0 && gap < 62 && Math.abs(o.lateral - this.lateral) < 2.6;
+        })
+        .sort((a, b) => signedDistance(this.t!, a.t) - signedDistance(this.t!, b.t))[0];
       if (ahead) {
-        const aheadSpeed =
-          ahead.yaw !== undefined && Math.cos(ahead.yaw - navAt(ahead.t).yaw) < 0 ? 0 : ahead.speed;
         const gap = signedDistance(this.t, ahead.t),
-          canPass =
-            !unsafe && curve < 0.026 && gap > 3.7 && (speed > aheadSpeed + 0.5 || aheadSpeed < 1.2);
-        let pass = 0;
-        const preference =
-          Math.abs(comingCurve) > 0.002
-            ? this.rival.id === 'rex'
-              ? -Math.sign(comingCurve)
-              : this.rival.id === 'nova'
-                ? Math.sign(comingCurve)
-                : this.rival.pass
-            : this.rival.pass;
-        if (canPass) {
-          for (const side of [preference, -preference]) {
+          aheadSpeed =
+            ahead.yaw !== undefined && Math.cos(ahead.yaw - navAt(ahead.t).yaw) < 0
+              ? 0
+              : Math.max(0, ahead.speed);
+        if (
+          !unsafe &&
+          !yielded &&
+          this.commit === 0 &&
+          curve < 0.026 &&
+          gap > 5 &&
+          (this.speedTarget > aheadSpeed + 1 || aheadSpeed < 1.2)
+        ) {
+          for (const side of [this.rival.pass, -this.rival.pass]) {
             const lane = side * 2.9;
-            if (
-              !nearby.some(
-                (o) =>
-                  Math.abs(signedDistance(this.t!, o.t)) < 18 && Math.abs(o.lateral - lane) < 2.4,
-              )
-            ) {
-              pass = lane;
+            const clear =
+              Math.abs(lane - ahead.lateral) > 2.4 &&
+              !nearby.some((o) => {
+                const delta = signedDistance(this.t!, o.t);
+                return delta > -10 && delta < 55 && Math.abs(o.lateral - lane) < 2.4;
+              });
+            if (clear && this.random() < d.confidence) {
+              this.desiredOffset = lane;
+              this.passingId = ahead.id;
+              this.commit = 4 * this.rival.patience;
+              this.state = 'OVERTAKE';
               break;
             }
           }
         }
-        if (pass && this.commit === 0 && this.random() < d.confidence) {
-          this.desiredOffset = pass;
-          this.commit = 2.8 * this.rival.patience;
-          this.state = 'OVERTAKE';
-        }
         if (this.commit === 0 || unsafe) {
-          this.state = 'FOLLOW';
-          this.speedTarget = Math.min(this.speedTarget, Math.max(0, aheadSpeed + (gap - 9) * 0.7));
+          this.state = yielded ? 'YIELD' : 'FOLLOW';
+          this.speedTarget = Math.min(this.speedTarget, Math.max(0, aheadSpeed + (gap - 8) * 0.75));
+        } else {
+          this.state = 'OVERTAKE';
+          if (Math.abs(ahead.lateral - this.lateral) < 2.5) {
+            this.speedTarget = Math.min(
+              this.speedTarget,
+              Math.max(0, aheadSpeed + (gap - 7) / 1.6),
+            );
+            if (gap < Math.max(14, speed * 0.8)) this.state = 'PREPARE_OVERTAKE';
+          }
         }
         if (gap < 5 && Math.abs(ahead.lateral - this.lateral) < 2.2)
           this.speedTarget = Math.min(this.speedTarget, Math.max(0, aheadSpeed - 4));
-        if (this.commit > 0 && Math.abs(this.offset - this.desiredOffset) > 1 && gap < 11) {
-          this.state = 'PREPARE_OVERTAKE';
-          this.speedTarget = Math.min(this.speedTarget, Math.max(6, aheadSpeed + 2));
-        }
-      } else if (this.commit === 0) {
-        const alongside = nearby.find(
+      } else if (this.commit === 0 && !yielded) {
+        const side = nearby.find(
           (o) =>
-            Math.abs(signedDistance(this.t!, o.t)) < 5 && Math.abs(o.lateral - this.lateral) < 2.6,
+            Math.abs(signedDistance(this.t!, o.t)) < 5 && Math.abs(o.lateral - this.lateral) < 2.4,
         );
-        if (alongside) {
-          desired = clamp(
-            alongside.lateral + (this.lateral >= alongside.lateral ? 2.5 : -2.5),
-            -3.2,
-            3.2,
-          );
+        if (side) {
+          desired = clamp(this.lateral + (this.lateral >= side.lateral ? 1.5 : -1.5), -3.2, 3.2);
           this.state = 'YIELD';
         } else {
-          const behind = nearby.find(
-            (o) => signedDistance(this.t!, o.t) < -7 && signedDistance(this.t!, o.t) > -20,
-          );
-          if (behind && !unsafe && curve < 0.02) {
-            desired = clamp(this.rival.lane * 0.6, -0.5, 0.5);
-            this.state = 'DEFEND';
-          } else this.state = 'FOLLOW_LINE';
+          this.state =
+            nearby.some(
+              (o) => signedDistance(this.t!, o.t) < -7 && signedDistance(this.t!, o.t) > -20,
+            ) &&
+            !unsafe &&
+            curve < 0.02
+              ? 'DEFEND'
+              : 'FOLLOW_LINE';
         }
-        this.desiredOffset = desired + d.precision * Math.sin(this.clock * 0.4 + (this.seed % 9));
-        if (this.random() < d.mistake * 0.03) this.desiredOffset += (this.random() - 0.5) * 0.5;
       }
+      if (this.commit === 0 && !yielded)
+        this.desiredOffset = desired + d.precision * Math.sin(this.clock * 0.4 + (this.seed % 9));
       if (unsafe) {
         this.commit = 0;
+        this.passingId = undefined;
         this.state = 'BYPASS';
         this.desiredOffset = 0;
       }
     }
     this.offset += clamp(
       routeOffset(this.t, this.desiredOffset) - this.offset,
-      -dt * 1.5,
-      dt * 1.5,
+      -dt * 2.2,
+      dt * 2.2,
     );
     this.lookahead = 6 + speed * 0.38;
     const targetT = (this.t + this.lookahead / TRACK_LENGTH) % 1,
@@ -298,7 +344,13 @@ export class RacingAI {
     this.target.z = target.z;
     const desired = Math.atan2(-(target.x - input.x), -(target.z - input.z)),
       error = angle(desired - input.yaw);
-    const steer = clamp(error * 3.6, -1, 1);
+    const yawAuthority =
+      this.car.handling.steering *
+      (1 -
+        (this.car.handling.steeringFalloff ?? 0.48) *
+          Math.min(1, speed / this.car.handling.maxSpeed));
+    const pursuitGain = Math.max(3.6, (2 * speed) / (this.lookahead * yawAuthority));
+    const steer = clamp(error * pursuitGain, -1, 1);
     this.steer += (steer - this.steer) * (1 - Math.exp(-dt * 10));
     if (Math.abs(error) > 0.7) this.speedTarget = Math.min(this.speedTarget, 8);
     if (projection.distance > 6) this.speedTarget = Math.min(this.speedTarget, 9);
@@ -306,17 +358,22 @@ export class RacingAI {
       this.speedTarget = Math.min(this.speedTarget, 14);
       this.state = 'FINISHED';
     }
-    if (speed > this.speedTarget + 1) this.throttleState = 'brake';
-    else if (speed < this.speedTarget - 0.6) this.throttleState = 'throttle';
+    if (speed > this.speedTarget + 0.8) this.throttleState = 'brake';
+    else if (speed < this.speedTarget - 0.3) this.throttleState = 'throttle';
     else if (this.throttleState === 'brake' && speed < this.speedTarget + 0.1)
       this.throttleState = 'coast';
-    else if (this.throttleState === 'throttle' && speed > this.speedTarget + 0.1)
+    else if (this.throttleState === 'throttle' && speed > this.speedTarget + 0.45)
       this.throttleState = 'coast';
     this.command.throttle = this.throttleState === 'throttle';
-    this.command.brake = this.throttleState === 'brake';
+    // The shared brake pedal reverses below walking speed. Only explicit recovery may reverse.
+    this.command.brake = this.throttleState === 'brake' && input.speed > 0.8;
+    if (input.speed < -0.5) {
+      this.command.throttle = true;
+      this.command.brake = false;
+    }
     this.command.steer = this.steer;
     this.stuck =
-      speed < 1.2 && !input.finished ? this.stuck + dt : Math.max(0, this.stuck - dt * 2);
+      speed < 0.35 && !input.finished ? this.stuck + dt : Math.max(0, this.stuck - dt * 2);
     this.recovery =
       (speed < 1.2 && this.speedTarget > 4) || Math.abs(error) > 1.6 || projection.distance > 8
         ? this.recovery + dt
@@ -333,6 +390,6 @@ export class RacingAI {
     return this.command;
   }
   get needsReset() {
-    return (this.stuck > 6 || this.recovery > 10) && this.cooldown === 0;
+    return (this.stuck > 6 || this.recovery > 10 || this.belowRoad > 1) && this.cooldown === 0;
   }
 }

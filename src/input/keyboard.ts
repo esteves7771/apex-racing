@@ -1,3 +1,4 @@
+import { touchInput } from './TouchInput';
 import { race, telemetry, useGame } from '../game/store';
 export const keys = new Set<string>();
 export function controls(held: Set<string>) {
@@ -8,6 +9,20 @@ export function controls(held: Set<string>) {
       Number(held.has('KeyA') || held.has('ArrowLeft')) -
       Number(held.has('KeyD') || held.has('ArrowRight')),
     drift: held.has('Space'),
+  };
+}
+export function clearDrivingInput() {
+  keys.clear();
+  touchInput.clear();
+}
+export function drivingInput(dt = 1 / 60) {
+  const keyboard = controls(keys),
+    touch = touchInput.sample(dt, useGame.getState().save.settings.steeringSensitivity);
+  return {
+    throttle: keyboard.throttle || touch.throttle,
+    brake: keyboard.brake || touch.brake,
+    drift: keyboard.drift || touch.drift,
+    steer: Math.max(-1, Math.min(1, keyboard.steer + touch.steer)),
   };
 }
 export function installKeyboard() {
@@ -23,7 +38,7 @@ export function installKeyboard() {
     if (e.code === 'Escape') {
       if (race.phase === 'PAUSED') race.resume();
       else race.pause();
-      keys.clear();
+      clearDrivingInput();
       useGame.getState().publish();
     }
     if (e.code === 'KeyC') telemetry.camera = 1 - telemetry.camera;
@@ -31,7 +46,7 @@ export function installKeyboard() {
   };
   const up = (e: KeyboardEvent) => keys.delete(e.code);
   const blur = () => {
-    keys.clear();
+    clearDrivingInput();
     race.pause();
     useGame.getState().publish();
   };
@@ -41,12 +56,14 @@ export function installKeyboard() {
   window.addEventListener('keydown', down);
   window.addEventListener('keyup', up);
   window.addEventListener('blur', blur);
+  window.addEventListener('pagehide', blur);
   document.addEventListener('visibilitychange', visibility);
   return () => {
     window.removeEventListener('keydown', down);
     window.removeEventListener('keyup', up);
     window.removeEventListener('blur', blur);
+    window.removeEventListener('pagehide', blur);
     document.removeEventListener('visibilitychange', visibility);
-    keys.clear();
+    clearDrivingInput();
   };
 }

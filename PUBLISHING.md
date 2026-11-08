@@ -50,3 +50,11 @@ git push origin main
 ```
 
 Multiple-release or merge reverts need a reviewed revert plan. Preserve release tags and never force-push. The public repository's first v0.5.1 tag marks the initial source import; subsequent deployment fixes remain in history. Use the verified public checkpoint tag documented in RELEASE.md for restoration.
+
+## v0.6.1 mobile release additions
+
+Reviewed source transfers must include public/manifest.webmanifest and public/icons/ while preserving public/COPYRIGHT.txt and public/THIRD_PARTY_NOTICES.txt. Preserve the public production/preview base /apex-racing/ and development awaitWriteFinish watcher guard. Never replace the Pages configuration blindly with private development configuration.
+
+Additional gates: npm run test:mobile, npm run test:immersive, npm run test:styles, npm run test:vehicles and npm run test:pages-manifest. Browser checks need Playwright Chromium or CHROME_PATH. Run test:pages against the actual deployed URL using APEX_TEST_URL. Test fullscreen/fallbacks and touch on the public site, then create the approved public tag on the verified deployed commit.
+
+The rollback checkpoints remain v0.5.1-public and v0.5.1-rollback-before-v061. Real Android/iOS/install acceptance remains a separate manual playtest; emulation is not physical-device certification.

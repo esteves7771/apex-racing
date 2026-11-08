@@ -1,6 +1,14 @@
+import { touchDevice } from '../input/device';
+import {
+  graphicsPresets,
+  initialAutoPreset,
+  lowerPreset,
+  needsLowerQuality,
+  type GraphicsPreset,
+} from './GraphicsQuality';
 import { trackId } from '../track/ActiveTrack';
 import { CoastWorld } from '../track/CoastWorld';
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -19,8 +27,16 @@ import { Obstacles } from './Obstacles';
 import { LivingWorld } from './LivingWorld';
 import { AIOpponents } from '../ai/AIOpponents';
 import { AIDiagnostics } from '../ai/AIDiagnostics';
-function Sun() {
+function Sun({ size }: { size: number }) {
   const ref = useRef<THREE.DirectionalLight>(null);
+  useEffect(() => {
+    const shadow = ref.current?.shadow;
+    if (shadow) {
+      shadow.map?.dispose();
+      shadow.map = null;
+      shadow.needsUpdate = true;
+    }
+  }, [size]);
   useFrame(() => {
     if (ref.current) {
       ref.current.position.copy(carPosition).add(new THREE.Vector3(35, 55, 25));
@@ -34,7 +50,7 @@ function Sun() {
       intensity={3.1}
       castShadow
       position={[35, 55, 25]}
-      shadow-mapSize={[2048, 2048]}
+      shadow-mapSize={[size, size]}
       shadow-camera-left={-55}
       shadow-camera-right={55}
       shadow-camera-top={55}
@@ -86,14 +102,24 @@ function Skids() {
 export function Scene({ onReady }: { onReady: () => void }) {
   const selectedTrack = useGame((s) => s.save.settings.track);
   const quality = useGame((s) => s.save.settings.quality);
+  const [auto, setAuto] = useState<GraphicsPreset>(() =>
+    initialAutoPreset(
+      touchDevice(),
+      window.innerWidth,
+      navigator.hardwareConcurrency,
+      (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+    ),
+  );
+  const preset = quality === 'auto' ? auto : quality,
+    graphics = graphicsPresets[preset];
   const paused = useGame(() => race.phase === 'PAUSED');
   const debug = usePhysicsDebug((s) => import.meta.env.DEV && s.enabled && s.wireframes);
   return (
     <Canvas
-      shadows={quality === 'high'}
-      dpr={quality === 'high' ? [1, 1.6] : 1}
+      shadows={graphics.shadows}
+      dpr={[1, graphics.dpr]}
       camera={{ position: [12, 10, 120], fov: 48, near: 0.1, far: 1300 }}
-      gl={{ antialias: quality === 'high', powerPreference: 'high-performance' }}
+      gl={{ antialias: !touchDevice() && quality !== 'low', powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;
@@ -107,7 +133,8 @@ export function Scene({ onReady }: { onReady: () => void }) {
       <color attach="background" args={[trackId === 'pine' ? '#b7dace' : '#b6e4e0']} />
       <fog attach="fog" args={['#b7dace', 260, 850]} />
       <hemisphereLight args={['#f8ecd4', '#668f81', 2]} />
-      <Sun />
+      <Sun size={graphics.shadowSize} />
+      <GraphicsMonitor enabled={quality === 'auto'} lower={() => setAuto((p) => lowerPreset(p))} />
       <Suspense fallback={null}>
         <Physics
           key={`physics-${selectedTrack}`}
@@ -118,14 +145,14 @@ export function Scene({ onReady }: { onReady: () => void }) {
           updatePriority={FRAME_ORDER.physics}
         >
           <Ready onReady={onReady} />
-          {trackId === 'pine' ? <TrackMesh /> : <CoastWorld />}
+          {trackId === 'pine' ? <TrackMesh /> : <CoastWorld qualityKey={preset} />}
           <ArcadeVehicleController />
           <AIOpponents />
           {trackId === 'pine' && <Obstacles />}
           {debug && <PhysicsCenterOfMass />}
         </Physics>
         <Skids key={`skids-${selectedTrack}`} />
-        <DrivingEffects key={`effects-${selectedTrack}`} />
+        <DrivingEffects density={graphics.effects} key={`effects-${selectedTrack}`} />
         {trackId === 'pine' && <LivingWorld />}
         {import.meta.env.DEV && <AIDiagnostics key={`ai-lines-${selectedTrack}`} />}
       </Suspense>
@@ -136,5 +163,24 @@ export function Scene({ onReady }: { onReady: () => void }) {
 }
 function Ready({ onReady }: { onReady: () => void }) {
   useEffect(onReady, [onReady]);
+  return null;
+}
+
+function GraphicsMonitor({ enabled, lower }: { enabled: boolean; lower: () => void }) {
+  const sample = useRef<number[]>([]),
+    elapsed = useRef(0),
+    cooldown = useRef(0);
+  useFrame((_, dt) => {
+    elapsed.current += dt;
+    cooldown.current -= dt;
+    if (!enabled || elapsed.current < 8 || dt > 0.1) return;
+    sample.current.push(dt * 1000);
+    if (sample.current.length > 300) sample.current.shift();
+    if (race.phase === 'MENU' && cooldown.current <= 0 && needsLowerQuality(sample.current)) {
+      lower();
+      sample.current = [];
+      cooldown.current = 30;
+    }
+  });
   return null;
 }

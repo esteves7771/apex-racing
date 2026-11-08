@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { telemetry, race, useGame } from '../game/store';
 import { carPosition, carForward } from '../vehicle/ArcadeVehicleController';
 const COUNT = 96;
-export function DrivingEffects() {
+export function DrivingEffects({ density = 'full' }: { density?: 'full' | 'low' }) {
   const mesh = useRef<THREE.InstancedMesh>(null),
     pool = useRef(
       Array.from({ length: COUNT }, () => ({
@@ -24,7 +24,8 @@ export function DrivingEffects() {
     return seed.current / 4294967296;
   };
   const emit = (n: number, landing = false) => {
-    if (useGame.getState().save.settings.effects === 'low') n = Math.ceil(n / 3);
+    if (density === 'low' || useGame.getState().save.settings.effects === 'low')
+      n = Math.ceil(n / 3);
     for (let i = 0; i < n; i++) {
       const s = pool.current[index.current++ % COUNT];
       s.p.copy(carPosition).addScaledVector(carForward, -1.2);

@@ -885,8 +885,452 @@ input {
   padding-bottom: 13px;
 }
 
-.track-card {max-width:440px;}
-.track-card label {display:block;font-size:11px;margin-bottom:18px;color:#eff2dc;}
-.track-card select {display:block;width:100%;margin-top:7px;background:#163b38;color:#f2efda;border:1px solid #a2c3ae;padding:9px;border-radius:4px;}
-.track-card > svg {float:right;margin:0 0 10px 14px;}
-.track-card .tag {display:block;clear:both;}
+.track-card {
+  max-width: 440px;
+}
+.track-card label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 18px;
+  color: #eff2dc;
+}
+.track-card select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  background: #163b38;
+  color: #f2efda;
+  border: 1px solid #a2c3ae;
+  padding: 9px;
+  border-radius: 4px;
+}
+.track-card > svg {
+  float: right;
+  margin: 0 0 10px 14px;
+}
+.track-card .tag {
+  display: block;
+  clear: both;
+}
+/* v0.6 touch layout keeps driving input independent from physics and desktop layout. */
+#root {
+  height: 100dvh;
+}
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.touch-controls button {
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  min-width: 48px;
+  min-height: 48px;
+  color: #f5f2dc;
+  background: #143b39d9;
+  border: 1px solid #c5dcc366;
+  border-radius: 12px;
+  font-weight: 800;
+}
+.touch-controls button:active {
+  background: #376356;
+}
+.touch-steering,
+.touch-pedals {
+  position: absolute;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.touch-steering {
+  left: max(14px, env(safe-area-inset-left));
+}
+.touch-pedals {
+  right: max(14px, env(safe-area-inset-right));
+}
+.touch-drive {
+  width: 68px;
+  height: 72px;
+  font-size: 14px;
+  box-shadow: 0 3px 12px #0c292b66;
+}
+.touch-steering .touch-drive {
+  font-size: 25px;
+}
+.touch-drive.touch-throttle {
+  height: 90px;
+  background: #366b55e8;
+  border-color: #f6d35e;
+  color: #ffec94;
+}
+.touch-drive.touch-drift {
+  width: 52px;
+  height: 52px;
+  font-size: 10px;
+}
+.touch-actions {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  top: 70px;
+  display: flex;
+  gap: 8px;
+}
+.rotate-hint {
+  display: none;
+}
+@media (max-width: 1180px) and (pointer: coarse), (max-width: 900px) {
+  .topbar {
+    top: max(10px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+    gap: 12px;
+  }
+  .topbar > span:not(.version) {
+    display: none;
+  }
+  .wordmark {
+    font-size: 25px;
+  }
+  .version {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .interface:has(.menu) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 65px max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr);
+    gap: 22px;
+    align-content: start;
+    pointer-events: auto;
+    background: linear-gradient(90deg, #102f30f2, #143a38aa);
+  }
+  .menu,
+  .track-card {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+  .track-card {
+    display: block !important;
+    align-self: start;
+    padding: 16px;
+  }
+  .track-card > svg {
+    width: 75px !important;
+    height: 85px !important;
+  }
+  .menu h1,
+  .menu:has(.cup-entry) h1 {
+    font-size: 34px;
+    line-height: 1.03;
+    margin: 8px 0;
+  }
+  .menu > p {
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 9px 0;
+  }
+  .menu .primary,
+  .menu .secondary,
+  .menu:has(.cup-entry) .primary,
+  .menu:has(.cup-entry) .secondary {
+    min-height: 44px;
+    padding: 10px 14px;
+    margin-top: 7px;
+  }
+  .menu nav button,
+  .text-button {
+    min-height: 44px;
+  }
+  .menu .record {
+    margin-top: 12px;
+    font-size: 10px;
+  }
+  .scrim {
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    overflow: auto;
+    align-items: center;
+  }
+  .dialog {
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px;
+    width: min(540px, 100%);
+    margin: auto;
+  }
+  .dialog h2 {
+    font-size: 27px;
+    margin: 7px 0;
+  }
+  .dialog button,
+  .dialog select {
+    min-height: 44px;
+  }
+  .garage-dialog {
+    width: min(680px, 100%) !important;
+  }
+  .showroom {
+    height: 150px !important;
+  }
+  .vehicle-tabs button,
+  .swatches button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .timing {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+    width: 185px;
+    padding: 10px;
+  }
+  .timing .time-row,
+  .timing .checkpoint,
+  .timing > small,
+  .timing .lap-times {
+    display: none;
+  }
+  .timer {
+    font-size: 28px !important;
+  }
+  .timing .eyebrow {
+    font-size: 8px;
+  }
+  .cup-position {
+    font-size: 22px;
+    margin: 3px 0;
+  }
+  .speed {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: 126px !important;
+  }
+  .speed strong {
+    font-size: 35px;
+  }
+  .minimap,
+  .bottom-bar,
+  .tip {
+    display: none !important;
+  }
+  .pause-button {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .dev-tools {
+    display: none;
+  }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .interface:has(.menu) {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .track-card > svg {
+    width: 90px !important;
+    height: 95px !important;
+  }
+  .menu h1,
+  .menu:has(.cup-entry) h1 {
+    font-size: 42px;
+  }
+  .rotate-hint {
+    display: block;
+    position: absolute;
+    top: 126px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    width: 210px;
+    padding: 8px;
+  }
+  .touch-drive {
+    width: 55px;
+    height: 65px;
+  }
+  .touch-drive.touch-drift {
+    width: 44px;
+    font-size: 9px;
+  }
+  .touch-steering,
+  .touch-pedals {
+    gap: 7px;
+  }
+  .touch-steering {
+    left: 8px;
+  }
+  .touch-pedals {
+    right: 8px;
+  }
+}
+@media (pointer: coarse) {
+  .race-controls,
+  .physics-debug-toggle {
+    display: none !important;
+  }
+  .timing .time-row {
+    display: none;
+  }
+  .touch-intro {
+    padding: 10px;
+    background: #173d39df;
+    border-left: 3px solid #f6d35e;
+  }
+}
+@media (pointer: coarse) {
+  .interface:not(:has(.menu)) .topbar {
+    display: none;
+  }
+  .cup-position small {
+    display: inline;
+    margin-left: 6px;
+  }
+  .touch-controls button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+.immersive-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #102f30ef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow: auto;
+}
+.immersive-card {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: #173d39;
+  border: 1px solid #92b9a666;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 15px 70px #001c22;
+}
+.immersive-card h1 {
+  font-size: 32px;
+  line-height: 1.05;
+}
+.immersive-card p {
+  color: #ceddcb;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.immersive-card button {
+  width: 100%;
+  min-height: 48px;
+  margin: 8px 0;
+  border-radius: 7px;
+  padding: 12px;
+}
+.immersive-card label {
+  display: block;
+  font-size: 12px;
+  margin: 16px 0;
+}
+.immersive-card input {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
+.immersive-card summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.launch-stripe {
+  height: 8px;
+  margin-top: 18px;
+  background: repeating-linear-gradient(120deg, #f6d35e 0 18px, #214d43 18px 30px);
+}
+.immersive-display {
+  position: absolute;
+  z-index: 8;
+  top: max(12px, env(safe-area-inset-top));
+  right: 80px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #f6d35e;
+  background: #173d39e8;
+}
+.immersive-status {
+  position: absolute;
+  z-index: 15;
+  top: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(350px, 80vw);
+  background: #173d39f5;
+  padding: 12px;
+  border: 1px solid #f6d35e;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.immersive-status button {
+  background: transparent;
+  color: #f6d35e;
+  min-width: 44px;
+  min-height: 44px;
+  float: right;
+}
+.orientation-guide {
+  position: absolute;
+  z-index: 9;
+  top: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  min-height: 48px;
+  background: #173d39df;
+  color: #fff2b0;
+  border: 1px solid #f6d35e;
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 10px;
+}
+@media (pointer: coarse) {
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+  .touch-controls {
+    overscroll-behavior: none;
+  }
+}
+@media (pointer: coarse) {
+  .topbar .version {
+    display: none;
+  }
+}
+.immersive-card label {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.immersive-card h1 {
+  letter-spacing: -0.6px;
+  font-weight: 800;
+}

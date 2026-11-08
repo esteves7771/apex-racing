@@ -72,6 +72,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
     const command = ai.update(
       {
         x: p.x,
+        y: p.y,
         z: p.z,
         yaw,
         speed: forward,

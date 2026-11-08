@@ -260,6 +260,8 @@ export class AudioManager {
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('blur', blur);
     window.addEventListener('focus', focus);
+    window.addEventListener('pagehide', blur);
+    window.addEventListener('pageshow', focus);
     this.interval = setInterval(() => this.update(), 50);
     return () => {
       document.removeEventListener('pointerdown', gesture);
@@ -267,6 +269,8 @@ export class AudioManager {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('blur', blur);
       window.removeEventListener('focus', focus);
+      window.removeEventListener('pagehide', blur);
+      window.removeEventListener('pageshow', focus);
       this.dispose();
     };
   }

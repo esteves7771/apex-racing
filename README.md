@@ -2,7 +2,7 @@
 
 A stylized 3D arcade racing game with Pine Valley Circuit, Coral Coast Rush, three cars, a 3D garage, original procedural music and physical AI opponents.
 
-Public playtest deployment is pending verification. The verified play link will be added after deployment.
+**[Play APEX online](https://esteves7771.github.io/apex-racing/)** · [Public repository](https://github.com/esteves7771/apex-racing)
 
 ## Play
 
@@ -51,3 +51,4 @@ Game records and preferences are stored locally in this browser (`localStorage`)
 APEX is proprietary. Copyright (c) 2026. All rights reserved. No open-source license is granted for the game. See COPYRIGHT.txt and THIRD_PARTY_NOTICES.txt. Third-party software retains its own licenses.
 
 See RELEASE.md for verification limits and PUBLISHING.md for release and rollback instructions.
+

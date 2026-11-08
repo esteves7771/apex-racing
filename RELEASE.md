@@ -19,7 +19,20 @@ Production Chrome smoke at the repository subpath: no runtime errors, failed req
 
 ## Limits
 
-Deployment/public-browser verification is recorded after publication. These smoke checks do not complete full races, establish personal-best record persistence, benchmark performance, or assess music by listening. The underlying v0.5.1 was previously verified with full races; public full-race completion, other browsers/GPUs, long sessions, high-speed camera comfort and speaker/headphone balance still require manual playtesting. Public and local origins have separate browser saves.
+The public site passed the smoke checks below; These smoke checks do not complete full races, establish personal-best record persistence, benchmark performance, or assess music by listening. The underlying v0.5.1 was previously verified with full races; public full-race completion, other browsers/GPUs, long sessions, high-speed camera comfort and speaker/headphone balance still require manual playtesting. Public and local origins have separate browser saves.
 
 The first GitHub run exposed undeclared Node types used by tests (local ancestor directories had masked this dependency). The public package now declares @types/node explicitly. No runtime bundle content changed.
 
+
+## Verified public deployment — 2026-11-08
+
+- Site: https://esteves7771.github.io/apex-racing/
+- Repository: https://github.com/esteves7771/apex-racing
+- Deployed source commit: b9d2d4074644ebb1736472de20362ea922f427e8
+- Successful workflow: https://github.com/esteves7771/apex-racing/actions/runs/42498228980
+- Stable public deployment tag: v0.5.1-public (separate from the initial source-import tag).
+- Actual public Chrome smoke passed: WebGL/Rapier render and driving on both circuits, three garage choices, four-car GP startup, mode startup, audio gesture/mute/resume/volume, camera/reset/pause/retry, browser storage and reload. No runtime errors, failed asset requests or unexpected external requests were observed.
+- All five live JS/CSS files were fetched and matched the local production output byte-for-byte. Both legal notice files returned HTTP 200. No hosting-specific rendering/quality reduction was applied. This asset comparison is not a frame-time benchmark.
+- The final README/report/publishing-guide update is documentation only and does not change the deployed game. CI is intentionally skipped for that documentation-only commit; all runtime/deployment changes must pass the full release pipeline.
+
+Manual public acceptance: complete a clean three-lap Time Attack and Grand Prix on each track; finish Pine Challenge; reload to verify earned records; compare all three cars in actual driving; check fullscreen/quality/reduced-motion cameras near tunnel portals and the start arch; listen on speakers/headphones; test other browsers/GPUs and long sessions. The browser smoke uses an isolated profile and does not touch existing player saves.

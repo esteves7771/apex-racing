@@ -45,7 +45,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
       lateral = v.x * right.x + v.z * right.z;
     const contact = probeGround(world, b, f, right),
       ai = racer.ai!;
-    if (!['RACING', 'FINISHING'].includes(race.phase) || race.gp.completed) {
+    if (!['RACING', 'FINISHING', 'RESULTS'].includes(race.phase) || race.gp.completed) {
       b.setLinvel({ x: 0, y: v.y, z: 0 }, true);
       b.setAngvel({ x: 0, y: 0, z: 0 }, true);
       state.current.speed = 0;
@@ -76,6 +76,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
         z: p.z,
         yaw,
         speed: forward,
+        lateralSpeed: lateral,
         grounded: flight.grounded,
         finished: racer.progress.finishTime !== null,
       },

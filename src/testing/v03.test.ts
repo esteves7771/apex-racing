@@ -88,6 +88,8 @@ it('scores one meaningful hit per obstacle per attempt, rejects touches, resets 
   r.impact('z', 'crate', 10);
   r.tick(80);
   for (const i of [1, 2, 3, 4, 5, 6, 7, 0]) r.gate(i);
+  expect(r.phase).toBe('FINISHING');
+  r.tick(4);
   expect(r.phase).toBe('RESULTS');
   expect(r.adjustedTime).toBe(89);
   expect(r.hitIds.size).toBe(3);

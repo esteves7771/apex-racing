@@ -33,7 +33,7 @@ export function installKeyboard() {
       ['RACING', 'COUNTDOWN', 'PAUSED'].includes(race.phase)
     )
       e.preventDefault();
-    keys.add(e.code);
+    if (race.phase === 'RACING' || race.phase === 'COUNTDOWN') keys.add(e.code);
     if (e.repeat) return;
     if (e.code === 'Escape') {
       if (race.phase === 'PAUSED') race.resume();
@@ -41,7 +41,7 @@ export function installKeyboard() {
       clearDrivingInput();
       useGame.getState().publish();
     }
-    if (e.code === 'KeyC') telemetry.camera = 1 - telemetry.camera;
+    if (e.code === 'KeyC' && race.phase === 'RACING') telemetry.camera = 1 - telemetry.camera;
     if (e.code === 'KeyR' && race.phase === 'RACING') telemetry.resetSerial++;
   };
   const up = (e: KeyboardEvent) => keys.delete(e.code);

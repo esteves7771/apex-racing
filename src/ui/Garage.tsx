@@ -22,12 +22,12 @@ function Showroom() {
   });
   return (
     <>
-      <color attach="background" args={['#dce9dc']} />
-      <hemisphereLight intensity={3} args={['#fff4de', '#7b9d93', 3]} />
+      <color attach="background" args={['#183d39']} />
+      <hemisphereLight intensity={3} args={['#ffe4b6', '#527f75', 3]} />
       <directionalLight position={[4, 7, 5]} intensity={3} />
       <mesh position={[0, -0.49, 0]}>
         <cylinderGeometry args={[3.2, 3.35, 0.3, 48]} />
-        <meshStandardMaterial color="#abc4b8" roughness={0.8} />
+        <meshStandardMaterial color="#54776b" roughness={0.8} />
       </mesh>
       <group
         ref={ref}

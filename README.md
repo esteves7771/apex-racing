@@ -1,10 +1,16 @@
-# APEX v0.6.1 — Public mobile playtest
+# APEX v0.7.1 — Living Worlds playtest
 
 **[Play APEX](https://esteves7771.github.io/apex-racing/)**
 
 A stylized 3D arcade racer with Pine Valley Circuit, Coral Coast Rush, three cars, a 3D garage, original procedural music and physical AI rivals.
 
 ## This release
+
+- Premium desktop racing menu, richer original forest/coastal scenery and more competitive fair AI.
+- Recognizable fans/marshals, lightweight birds, slowly drifting faceted clouds and restrained chase-camera speed feedback.
+- Original Forest Flow and Lagoon Drive circuit music, final-lap energy and a smooth finish/results transition.
+- Physical post-finish cooldown: official timing freezes immediately while the car clears the line; trailing rivals can finish even after Show results.
+- Repaired Coral Coast causeway guardrail/deck junction, with matching visual edges and colliders.
 
 - Touch steering, throttle, brake, drift, camera/reset and pause; responsive phone/tablet menus and HUD.
 - Optional phone welcome: Enter Fullscreen Race or Continue in Browser. Landscape is recommended. Display options allow re-entry/exit and a remembered welcome preference. Fullscreen/orientation failures never prevent browser play.
@@ -56,4 +62,4 @@ Records/preferences stay in this browser's localStorage. There is no game accoun
 
 APEX is proprietary. Copyright (c) 2026. All rights reserved. No open-source game license is granted. See COPYRIGHT.txt and THIRD_PARTY_NOTICES.txt; third-party software retains its own licenses.
 
-See PUBLISHING.md for approved release and rollback procedures. The preserved previous release is tagged v0.5.1-public.
+See PUBLISHING.md for approved release and rollback procedures. The previous public release is preserved by v0.6.1-public and v0.6.1-rollback-before-v071; older v0.5.1 tags remain intact.

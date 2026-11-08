@@ -48,7 +48,7 @@ try {
       font: getComputedStyle(document.documentElement).fontFamily,
       margin: getComputedStyle(document.body).margin,
       background: getComputedStyle(document.documentElement).backgroundColor,
-      menu: getComputedStyle(document.querySelector('.menu')).position,
+      menu: getComputedStyle(document.querySelector('.menu,.premium-menu')).position,
       button: getComputedStyle(document.querySelector('.primary')).backgroundColor,
       canvas: document.querySelector('canvas').getBoundingClientRect().toJSON(),
       css: [...document.querySelectorAll('style[data-vite-dev-id]')].reduce(
@@ -68,8 +68,7 @@ try {
         page.evaluate(() => ({
           font: getComputedStyle(document.documentElement).fontFamily,
           margin: getComputedStyle(document.body).margin,
-          menu: getComputedStyle(document.querySelector('.menu')).position,
-          button: getComputedStyle(document.querySelector('.primary')).backgroundColor,
+          menu: getComputedStyle(document.querySelector('.menu,.premium-menu')).position,
         }));
       const current = await signature();
       const stable = execFileSync('git', ['show', 'v0.5.1-public:src/app/style.css'], {

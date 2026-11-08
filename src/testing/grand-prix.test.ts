@@ -171,13 +171,14 @@ it('keeps the countdown synchronized, freezes pause, and resumes finishing witho
   expect(r.phase).toBe('RACING');
   r.tick(1);
   expect(r.elapsed).toBe(1);
-  r.phase = 'FINISHING';
+  r.beginFinish();
   r.pause();
   r.tick(10);
   r.resume();
   expect(r.phase).toBe('FINISHING');
   r.tick(1);
-  expect(r.elapsed).toBe(2);
+  expect(r.elapsed).toBe(1);
+  expect(r.simulationTime).toBe(2);
 });
 it('requires ordered checkpoints and three valid laps; finish crossing alone and reverse travel do not score', () => {
   const r = new RacerProgress('x');

@@ -9,6 +9,7 @@ import {
   type RapierRigidBody,
 } from '@react-three/rapier';
 import * as THREE from 'three';
+import { finishCommand } from '../game/FinishDrive';
 import { CarVisual } from './CarVisual';
 import { applyVehicleCommand } from './VehicleDynamics';
 import { capturePhysicsStep, physicsDiagnostics, usePhysicsDebug } from './physicsDiagnostics';
@@ -141,7 +142,8 @@ export function ArcadeVehicleController() {
     const probe = probeGround(world, b, f, right),
       contact = probe.grounded;
     telemetry.grounded = contact;
-    if (race.phase !== 'RACING') {
+    const cooling = race.cooldownActive;
+    if (race.phase !== 'RACING' && !cooling) {
       b.setLinvel({ x: 0, y: v.y, z: 0 }, true);
       b.setAngvel({ x: 0, y: 0, z: 0 }, true);
       telemetry.speed = 0;
@@ -183,7 +185,9 @@ export function ArcadeVehicleController() {
     telemetry.groundPitch = Math.atan(
       -(probe.normal.x * f.x + probe.normal.z * f.z) / probe.normal.y,
     );
-    const input = drivingInput(),
+    const input = cooling
+        ? finishCommand(p.x, p.z, yaw, forward, race.finishElapsed)
+        : drivingInput(),
       next = applyVehicleCommand(
         b,
         definition,
@@ -219,8 +223,10 @@ export function ArcadeVehicleController() {
     telemetry.steering = input.steer;
     telemetry.drift = next.drift;
     telemetry.braking = input.brake && forward > 0.5;
-    if (near.distance > 9) race.invalidate('Off track · lap invalid');
-    if (p.y < -4) telemetry.resetSerial++;
+    if (race.phase === 'RACING') {
+      if (near.distance > 9) race.invalidate('Off track · lap invalid');
+      if (p.y < -4) telemetry.resetSerial++;
+    }
   });
   useAfterPhysicsStep(() => {
     const b = body.current;
@@ -234,9 +240,9 @@ export function ArcadeVehicleController() {
       capturePhysicsStep(world, b, beforeSolver.current, forwardAxis.current);
     const p = b.translation(),
       current = new THREE.Vector3(p.x, p.y, p.z);
-    if (race.mode === 'gp' && ['RACING', 'FINISHING'].includes(race.phase)) {
+    if (race.mode === 'gp' && ['RACING', 'FINISHING', 'RESULTS'].includes(race.phase)) {
       race.gp.player.body = b;
-      race.gp.update(race.elapsed);
+      race.gp.update(race.simulationTime);
       const progress = race.gp.player.progress;
       race.laps = progress.laps;
       race.nextGate = progress.nextGate;
@@ -244,14 +250,11 @@ export function ArcadeVehicleController() {
       race.invalid = progress.invalid;
       race.message = progress.invalid ? 'Lap invalid · pass every gate in order' : '';
       race.lapStart = progress.lapStart;
-      if (race.gp.completed) {
-        race.phase = 'RESULTS';
-        saveRecords();
-      } else if (progress.finishTime !== null) race.phase = 'FINISHING';
+      if (progress.finishTime !== null && race.beginFinish(progress.finishTime)) saveRecords();
     } else if (race.phase === 'RACING') {
       for (let i = 0; i < checkpoints.length; i++)
         if (crossedGate(previous.current, current, i)) race.gate(i);
-      if ((race.phase as string) === 'RESULTS') saveRecords();
+      if ((race.phase as string) === 'FINISHING') saveRecords();
     }
     previous.current.copy(current);
     telemetry.x = p.x;
@@ -260,6 +263,7 @@ export function ArcadeVehicleController() {
   });
   useFrame(() => {
     if (visual.current) {
+      visual.current.visible = !['MENU', 'MODE_SELECT'].includes(race.phase);
       visual.current.updateWorldMatrix(true, false);
       carPosition.setFromMatrixPosition(visual.current.matrixWorld);
       carForward.set(0, 0, -1).transformDirection(visual.current.matrixWorld);

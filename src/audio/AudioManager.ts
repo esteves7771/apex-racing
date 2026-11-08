@@ -110,12 +110,13 @@ export class AudioManager {
       b[name].gain.setTargetAtTime(value, ctx.currentTime, 0.05);
     const dt = Math.min(0.25, Math.max(0, ctx.currentTime - this.lastMusicTime));
     this.lastMusicTime = ctx.currentTime;
-    const theme = themeFor(race.phase, race.mode),
+    const theme = themeFor(race.phase === 'FINISHING' ? 'RESULTS' : race.phase, race.mode),
       isCoast = trackId === 'coast';
     this.music?.update(
       isCoast && theme === 'race' ? 'coast' : theme,
       Math.abs(telemetry.speed),
       dt,
+      race.phase === 'RACING' && race.laps.length === 2,
     );
     const t = isCoast ? nearestTrack(telemetry.x, telemetry.z).t : 0,
       inTunnel = isCoast && !!coast.tunnelAt(t);
@@ -180,7 +181,7 @@ export class AudioManager {
     }
 
     this.vehicle?.update(
-      race.phase === 'RACING',
+      ['RACING', 'FINISHING'].includes(race.phase),
       telemetry.speed,
       telemetry.drift,
       telemetry.airborne,
@@ -194,7 +195,9 @@ export class AudioManager {
       this.lastLanding = telemetry.landingSerial;
     }
     const cupActive =
-      race.mode === 'gp' && ['COUNTDOWN', 'RACING', 'FINISHING'].includes(race.phase);
+      race.mode === 'gp' &&
+      (['COUNTDOWN', 'RACING', 'FINISHING'].includes(race.phase) ||
+        (race.phase === 'RESULTS' && !race.gp.completed));
     if (cupActive && !this.rivals) this.rivals = new RivalAudioController(ctx, b.vehicle);
     if (!cupActive && this.rivals) {
       this.rivals.dispose();
@@ -220,6 +223,7 @@ export class AudioManager {
     }
     if (race.phase !== this.lastPhase) {
       if (race.phase === 'RACING' && this.lastPhase === 'COUNTDOWN') this.play('start');
+      if (race.phase === 'FINISHING') this.play('finish');
       if (race.phase === 'RESULTS')
         this.play(
           race.mode === 'gp' && race.gp.position <= 3

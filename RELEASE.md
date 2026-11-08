@@ -1,27 +1,15 @@
-# APEX v0.6.1 public mobile playtest
+# APEX v0.7.1 public playtest
 
-Authorized source-only update of the separate public repository. Private development history, prompts, session guides, machine paths and raw reports are excluded. Generic APEX Development author metadata is retained. Runtime dependency versions and proprietary/third-party notices are unchanged.
+Approved source-only update. Private Git history, prompts, development handovers, player reference documents and raw captures are excluded. Generic public Git author identity and existing proprietary/third-party notices are preserved. Dependency versions are unchanged.
 
-## Included
+Includes the premium desktop menu, expanded original forest/coastal art and fair racing-line/braking/overtaking improvements from v0.7, plus the route-aware Coral causeway rail/deck/collider repair. v0.7.1 adds recognizable instanced fans/marshals, birds, drifting faceted clouds, restrained chase speed FOV, original Forest Flow/Lagoon Drive music, final-lap layering and a controlled physical finish cooldown. Official times/classification freeze at crossing; remaining GP cars can still finish even after the player skips to results. Mobile touch/fullscreen fallbacks, PWA icons/manifest, Bolt ownership and desktop CSS safeguards are retained.
 
-Mobile multi-touch/shared physics, responsive layouts, Auto/Low/Medium/High graphics, stronger physically fair AI, Bolt geometry ownership/reconciliation repair, temporary shader-warmup material ownership, and the development awaitWriteFinish CSS repair. v0.6.1 adds optional gesture-only fullscreen/landscape launch, browser/iPhone fallbacks, Display controls, a persisted welcome preference and relative-scope manifest/icons. No automatic fullscreen on load/focus, forced CSS rotation or service worker was added.
+Release gates: fresh clean install, TypeScript, 132 standard tests (three opt-in diagnostic/benchmark cases skipped), production build, source/privacy/license/dependency review, desktop/menu and repeated vehicle-selection checks, mobile/immersive checks and Pages base-path assets/manifest. Prior to transfer, both circuits completed physical three-lap Time Attack runs and native finish/skip/pause/retry fixtures let all trailing rivals finish. A production-only full Pine Time Attack run also passed using ordinary keyboard input and public HUD telemetry.
 
-## Release gates
+Short native High/1740×864 desktop driving samples measured p95 6.8 ms Pine and 6.7 ms Coral on the tested RTX 4070 SUPER; these are display-limited samples, not guarantees for other hardware. Existing large Rapier/WASM bundle warning remains. Physical Android/iPhone rotation/fullscreen/install, thermal/low-memory/long-session testing and manual soundtrack listening on speakers/headphones remain acceptance tasks. Human difficulty calibration still needs measured equivalent three-lap records.
 
-The clean public checkout must pass npm ci, TypeScript, all 113 tests, production build, desktop/mobile browser checks, repeated vehicle selection, fullscreen fallback tests and /apex-racing/ manifest/asset verification before pushing main. The standard suite has two additional opt-in benchmark/diagnostic tests; these are not counted as standard passes.
+Preserve v0.6.1-public and v0.6.1-rollback-before-v071 as rollback points. Never force-push or merge private history. After deployment, verify Actions, actual live assets, both circuits/cars/audio and finish behavior, then create v0.7.1-public at the verified deployed commit. The tag is not created merely because a push succeeds. Follow PUBLISHING.md for future approved source-only updates.
 
-The pre-transfer local benchmark measured 12 both-track/difficulty/seed races and 36 rival finishes with zero resets. Mean Club/Pro three-lap times improved about 13–18% over v0.5.1 without changing vehicle physics limits. That establishes measured simulation pace, not human difficulty certification. Published source retains those algorithms and regression gates.
+Final input correction: throttle held during countdown is buffered until GO; physics remains locked before GO and new menu driving keys stay ignored. A regression test and the production Pages startup check cover this behavior. The legacy CSS gate now recognizes both menu layouts while preserving missing-stylesheet/root-layout assertions.
 
-Local prepublication verification passed: TypeScript; 113 tests (22 files, two opt-in diagnostics skipped); production build; desktop 1740�864/1920�1080 CSS regression; phone portrait/landscape and tablet multitouch; 16 vehicle-selection cycles on each layout; native Chrome fullscreen plus unsupported/denied/lock-denied/standalone scenarios; production driving on both circuits; Pages manifest/icons; desktop mode/audio smoke. Both runtime-only and full dependency audits reported zero vulnerabilities. No critical browser runtime or asset errors were observed. Physical-device limitations below still apply.
-
-After pushing, verify the actual Actions deployment, live assets and public desktop/touch gameplay before creating v0.6.1-public. The annotated tag records the verified deployed commit; it is never created merely because a push succeeded.
-
-## Remaining acceptance
-
-Chrome phone/tablet emulation and injected API failures are preliminary checks. Actual Android Chrome landscape lock, Android Firefox, iPhone Safari, physical rotation/browser navigation, Home Screen install/update behavior, speakers/headphones, thermal/low-memory behavior and long sessions remain manual. No physical-device verification or universal frame-rate guarantee is claimed. Existing WASM-size and Rapier initialization warnings remain.
-
-## Rollback
-
-v0.5.1-public preserves the previously deployed v0.5.1 code. v0.5.1-rollback-before-v061 preserves the public documentation/source HEAD before this release. No old tag is overwritten.
-
-To roll back this release after review: on main, git revert the public v0.6.1 release commit, rerun checks and browser tests, then push the revert. This restores prior content without rewriting history. Do not force-push or merge private history. The prior release notes are preserved in RELEASE_V051.md.
+Prepublication gates passed on the sanitized checkout: npm ci; TypeScript; all 132 standard tests (three opt-in cases skipped); production build; desktop/current menu and CSS layouts; 16 selection cycles on each desktop/mobile layout with no Bolt mismatches; mobile input; real/unsupported/denied/lock-denied/standalone immersive scenarios; Pages manifest/base-path assets; production modes/audio/single-context smoke; mobile production driving on both circuits; native-clock both-track finish/skip/pause/retry with all trailing AI classified. Full and runtime dependency audits both reported zero vulnerabilities. No sensitive paths, credentials, private documents or private Git objects were imported.

@@ -1,6 +1,6 @@
 {
   "name": "apex-racing",
-  "version": "0.6.1",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,11 @@
     "test:immersive": "node scripts/immersive-browser-test.mjs",
     "test:styles": "node scripts/style-regression.mjs",
     "test:ai-benchmark": "node scripts/ai-benchmark.mjs",
-    "test:pages-manifest": "node scripts/immersive-pages-test.mjs"
+    "test:pages-manifest": "node scripts/immersive-pages-test.mjs",
+    "test:v07-ui": "node scripts/v07-ui.mjs",
+    "test:v071": "node scripts/v071-integration.mjs",
+    "test:release-race": "node scripts/release-race.mjs",
+    "audio:previews": "node scripts/export-soundtrack.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.4.0",

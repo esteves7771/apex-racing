@@ -39,8 +39,8 @@ export function ImmersiveShell({ children }: { children: ReactNode }) {
     };
     const returning = () => {
       setFull(!!document.fullscreenElement);
-      if (!document.fullscreenElement)
-        setMessage('Browser play is ready. Fullscreen is not active.');
+      if (touch && !document.fullscreenElement)
+        setMessage('');
     };
     window.addEventListener('resize', resize);
     document.addEventListener('fullscreenchange', sync);

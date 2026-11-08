@@ -1,3 +1,4 @@
+import { racingLineAt } from './RacingLine';
 import { navAt, projectTrack, routeOffset, clamp, angle, signedDistance } from './TrackNavigation';
 import { TRACK_LENGTH, unsafeRoute, trackId, roadHeight } from '../track/ActiveTrack';
 import type { VehicleDefinition, VehicleId } from '../vehicle/VehicleRegistry';
@@ -5,9 +6,9 @@ export type Difficulty = 'rookie' | 'club' | 'pro';
 export const difficulties = {
   rookie: {
     label: 'Rookie',
-    pace: 0.81,
-    corner: 0.81,
-    braking: 0.65,
+    pace: 0.9,
+    corner: 0.9,
+    braking: 0.8,
     reaction: 0.18,
     precision: 0.16,
     confidence: 0.55,
@@ -15,9 +16,9 @@ export const difficulties = {
   },
   club: {
     label: 'Club',
-    pace: 0.94,
-    corner: 0.94,
-    braking: 0.8,
+    pace: 0.98,
+    corner: 0.98,
+    braking: 0.9,
     reaction: 0.12,
     precision: 0.09,
     confidence: 0.8,
@@ -27,7 +28,7 @@ export const difficulties = {
     label: 'Pro',
     pace: 1,
     corner: 1,
-    braking: 0.92,
+    braking: 0.98,
     reaction: 0.08,
     precision: 0.035,
     confidence: 1,
@@ -53,7 +54,7 @@ export const rivals = [
     color: '#bba7f0',
     personality: 'Speed specialist',
     lane: 0.35,
-    braking: 0.92,
+    braking: 0.98,
     pass: 1,
     patience: 1.1,
   },
@@ -83,7 +84,7 @@ export interface Traffic {
 export function cornerSpeed(t: number, car: VehicleDefinition, difficulty: Difficulty) {
   const d = difficulties[difficulty],
     at = navAt(t),
-    k = Math.abs(at.curvature);
+    k = Math.abs(racingLineAt(t, difficulty, car).curvature);
   const rise = (navAt(t + 6 / TRACK_LENGTH).y - 2 * at.y + navAt(t - 6 / TRACK_LENGTH).y) / 36;
   const crestLimit = rise < -0.001 ? Math.sqrt(7 / -rise) : Infinity;
   // Available yaw authority as well as lateral grip limits the arcade turning radius.
@@ -91,15 +92,25 @@ export function cornerSpeed(t: number, car: VehicleDefinition, difficulty: Diffi
   // grip is lateral velocity damping (1/s), not a lateral acceleration ceiling.
   // Limit equilibrium slip v^2*k/grip by difficulty; yaw authority remains a hard cap.
   const slipBudget =
-    difficulty === 'pro'
-      ? trackId === 'pine'
-        ? 1.85
-        : 2.1
-      : difficulty === 'club'
+    car.id !== 'bolt'
+      ? difficulty === 'pro'
         ? trackId === 'pine'
-          ? 1.6
-          : 1.75
-        : 1.05;
+          ? 2.6
+          : 3.0
+        : difficulty === 'club'
+          ? trackId === 'pine'
+            ? 2.15
+            : 2.4
+          : 1.65
+      : difficulty === 'pro'
+        ? trackId === 'pine'
+          ? 3.6
+          : 4.0
+        : difficulty === 'club'
+          ? trackId === 'pine'
+            ? 3.0
+            : 3.2
+          : 2.1;
   return Math.min(
     car.handling.maxSpeed * d.pace,
     crestLimit,
@@ -128,7 +139,8 @@ export function plannedSpeed(
       ),
     );
   }
-  if (unsafeRoute(t)) limit = Math.min(limit, 24);
+  // The chosen route is the level bypass. Its actual curvature/crest limits govern pace;
+  // the no-passing zone is not a blanket speed restriction.
   return Math.max(6.5, limit);
 }
 export class RacingAI {
@@ -136,6 +148,8 @@ export class RacingAI {
   lateral = 0;
   offset = 0;
   desiredOffset = 0;
+  previousLineOffset = 0;
+  lineAtDecision = 0;
   speedTarget = 0;
   steer = 0;
   state = 'GRID';
@@ -147,6 +161,8 @@ export class RacingAI {
   stuck = 0;
   recovery = 0;
   belowRoad = 0;
+  queueTime = 0;
+  backOut = 0;
   cooldown = 0;
   resets = 0;
   costMs = 0;
@@ -168,6 +184,8 @@ export class RacingAI {
     this.t = t;
     this.offset = 0;
     this.desiredOffset = 0;
+    this.previousLineOffset = racingLineAt(t, this.difficulty, this.car).offset;
+    this.lineAtDecision = this.previousLineOffset;
     this.steer = 0;
     this.decision = 0;
     this.commit = 0;
@@ -175,6 +193,8 @@ export class RacingAI {
     this.stuck = 0;
     this.recovery = 0;
     this.belowRoad = 0;
+    this.queueTime = 0;
+    this.backOut = 0;
     this.cooldown = 0;
     this.state = 'GRID';
     this.clock = 0;
@@ -192,6 +212,7 @@ export class RacingAI {
       yaw: number;
       speed: number;
       grounded: boolean;
+      lateralSpeed?: number;
       finished?: boolean;
     },
     traffic: Traffic[] = [],
@@ -213,23 +234,22 @@ export class RacingAI {
       speed = Math.abs(input.speed);
     if (this.decision <= 0) {
       this.decision = d.reaction;
+      this.lineAtDecision = racingLineAt(this.t, this.difficulty, this.car).offset;
       this.speedTarget = plannedSpeed(this.t, this.car, this.difficulty, this.rival.braking);
       const unsafe = unsafeRoute(this.t),
         curve = Math.abs(navAt(this.t + 35 / TRACK_LENGTH).curvature);
       const nearby = traffic.filter(
         (o) => o.id !== this.rival.id && Math.hypot(input.x - o.x, input.z - o.z) < 85,
       );
-      const currentCurve = navAt(this.t).curvature,
-        comingCurve = navAt(this.t + 35 / TRACK_LENGTH).curvature;
-      let desired =
-        this.rival.lane +
-        clamp(
-          (comingCurve - currentCurve * 1.5) *
-            (this.difficulty === 'pro' ? 70 : this.difficulty === 'club' ? 50 : 15),
-          -1.1,
-          1.1,
-        );
+      let desired = racingLineAt(this.t, this.difficulty, this.car).offset + this.rival.lane * 0.28;
       const passing = nearby.find((o) => o.id === this.passingId);
+      // Never merge back merely because a timer expired while still alongside the target.
+      if (
+        passing &&
+        signedDistance(this.t, passing.t) > -8 &&
+        signedDistance(this.t, passing.t) < 45
+      )
+        this.commit = Math.max(this.commit, d.reaction + 0.15);
       if (this.commit > 0 && (!passing || signedDistance(this.t, passing.t) < -8)) {
         this.commit = 0;
         this.passingId = undefined;
@@ -268,16 +288,20 @@ export class RacingAI {
           !yielded &&
           this.commit === 0 &&
           curve < 0.026 &&
-          gap > 5 &&
+          gap > 1 &&
           (this.speedTarget > aheadSpeed + 1 || aheadSpeed < 1.2)
         ) {
           for (const side of [this.rival.pass, -this.rival.pass]) {
-            const lane = side * 2.9;
+            const lane = side * 3.1;
             const clear =
               Math.abs(lane - ahead.lateral) > 2.4 &&
               !nearby.some((o) => {
                 const delta = signedDistance(this.t!, o.t);
-                return delta > -10 && delta < 55 && Math.abs(o.lateral - lane) < 2.4;
+                return (
+                  delta > -10 &&
+                  delta < Math.max(30, speed * 1.1) &&
+                  Math.abs(o.lateral - lane) < 2.4
+                );
               });
             if (clear && this.random() < d.confidence) {
               this.desiredOffset = lane;
@@ -296,7 +320,7 @@ export class RacingAI {
           if (Math.abs(ahead.lateral - this.lateral) < 2.5) {
             this.speedTarget = Math.min(
               this.speedTarget,
-              Math.max(0, aheadSpeed + (gap - 7) / 1.6),
+              Math.max(gap > 6 ? 2 : 0, aheadSpeed + (gap - 5.5) / 1.5),
             );
             if (gap < Math.max(14, speed * 0.8)) this.state = 'PREPARE_OVERTAKE';
           }
@@ -322,6 +346,13 @@ export class RacingAI {
               : 'FOLLOW_LINE';
         }
       }
+      if (this.state === 'DEFEND') {
+        const pursuer = nearby.find(
+          (o) => signedDistance(this.t!, o.t) < -10 && signedDistance(this.t!, o.t) > -24,
+        );
+        if (pursuer)
+          desired = clamp(desired + clamp(pursuer.lateral - desired, -0.55, 0.55), -3.2, 3.2);
+      }
       if (this.commit === 0 && !yielded)
         this.desiredOffset = desired + d.precision * Math.sin(this.clock * 0.4 + (this.seed % 9));
       if (unsafe) {
@@ -331,26 +362,50 @@ export class RacingAI {
         this.desiredOffset = 0;
       }
     }
-    this.offset += clamp(
-      routeOffset(this.t, this.desiredOffset) - this.offset,
-      -dt * 2.2,
-      dt * 2.2,
-    );
-    this.lookahead = 6 + speed * 0.38;
+    const nominalLine = racingLineAt(this.t, this.difficulty, this.car).offset;
+    const followsLine =
+      ['FOLLOW_LINE', 'DEFEND', 'FINISHED'].includes(this.state) && !unsafeRoute(this.t);
+    // Move the reference frame with the continuous planned path; smooth only lane deviation.
+    if (followsLine) this.offset += nominalLine - this.previousLineOffset;
+    const destination = followsLine
+      ? nominalLine + this.desiredOffset - this.lineAtDecision
+      : this.desiredOffset;
+    this.offset += clamp(routeOffset(this.t, destination) - this.offset, -dt * 3.6, dt * 3.6);
+    this.previousLineOffset = nominalLine;
+    this.lookahead = 5.5 + speed * 0.32;
     const targetT = (this.t + this.lookahead / TRACK_LENGTH) % 1,
-      target = navAt(targetT, routeOffset(targetT, this.offset));
+      target = navAt(
+        targetT,
+        routeOffset(
+          targetT,
+          clamp(
+            this.commit > 0 || ['YIELD', 'FOLLOW', 'PREPARE_OVERTAKE'].includes(this.state)
+              ? this.offset
+              : racingLineAt(targetT, this.difficulty, this.car).offset +
+                  this.offset -
+                  racingLineAt(this.t, this.difficulty, this.car).offset,
+            -3.3,
+            3.3,
+          ),
+        ),
+      );
     this.target.x = target.x;
     this.target.y = target.y;
     this.target.z = target.z;
     const desired = Math.atan2(-(target.x - input.x), -(target.z - input.z)),
-      error = angle(desired - input.yaw);
+      error = angle(
+        desired -
+          input.yaw +
+          Math.atan2(input.lateralSpeed ?? 0, Math.max(8, speed)) *
+            (this.car.id === 'vortex' ? 0.3 : 0.8),
+      );
     const yawAuthority =
       this.car.handling.steering *
       (1 -
         (this.car.handling.steeringFalloff ?? 0.48) *
           Math.min(1, speed / this.car.handling.maxSpeed));
-    const pursuitGain = Math.max(3.6, (2 * speed) / (this.lookahead * yawAuthority));
-    const steer = clamp(error * pursuitGain, -1, 1);
+    const pursuitGain = Math.max(2.6, (2 * speed) / (this.lookahead * yawAuthority));
+    const steer = clamp(Math.sin(error) * pursuitGain, -1, 1);
     this.steer += (steer - this.steer) * (1 - Math.exp(-dt * 10));
     if (Math.abs(error) > 0.7) this.speedTarget = Math.min(this.speedTarget, 8);
     if (projection.distance > 6) this.speedTarget = Math.min(this.speedTarget, 9);
@@ -372,17 +427,47 @@ export class RacingAI {
       this.command.brake = false;
     }
     this.command.steer = this.steer;
+    const trafficNear = traffic.some(
+      (o) => o.id !== this.rival.id && Math.hypot(o.x - input.x, o.z - input.z) < 6,
+    );
+    const rearBlocked = traffic.some((o) => {
+      if (o.id === this.rival.id) return false;
+      const dx = o.x - input.x,
+        dz = o.z - input.z,
+        forward = -dx * Math.sin(input.yaw) - dz * Math.cos(input.yaw),
+        side = dx * Math.cos(input.yaw) - dz * Math.sin(input.yaw);
+      return forward < -0.5 && forward > -8 && Math.abs(side) < 2.5;
+    });
+    this.queueTime =
+      !input.finished && speed < 1.2 && (trafficNear || (!!this.passingId && this.speedTarget < 1))
+        ? this.queueTime + dt
+        : 0;
+    if (this.queueTime > 1.2 && this.backOut <= 0 && !rearBlocked) {
+      this.backOut = 1.15;
+      this.queueTime = 0;
+    }
+    if (this.backOut > 0) {
+      this.backOut = Math.max(0, this.backOut - dt);
+      this.state = 'BACK_OUT';
+      // Use the same real pedals to hold a slow reverse while making room to turn.
+      this.command.throttle = input.speed < -3;
+      this.command.brake = !this.command.throttle;
+      this.command.steer = -Math.sign(error);
+    }
     this.stuck =
-      speed < 0.35 && !input.finished ? this.stuck + dt : Math.max(0, this.stuck - dt * 2);
+      speed < 0.35 && !input.finished && !trafficNear
+        ? this.stuck + dt
+        : Math.max(0, this.stuck - dt * 2);
     this.recovery =
-      (speed < 1.2 && this.speedTarget > 4) || Math.abs(error) > 1.6 || projection.distance > 8
+      (((speed < 1.2 && this.speedTarget > 4) || Math.abs(error) > 1.6) && !trafficNear) ||
+      projection.distance > 8
         ? this.recovery + dt
         : Math.max(0, this.recovery - dt * 2);
     if (this.stuck > 2.5) {
       this.state = 'RECOVER';
       this.command.throttle = false;
       this.command.brake = true;
-      this.command.steer = Math.sign(error || 1);
+      this.command.steer = -Math.sign(error || 1);
     }
     this.costMs = performance.now() - started;
     this.totalCostMs += this.costMs;

@@ -12,12 +12,12 @@ export const compositions = {
     motif: [74, 77, 81, 77, 72, 69, 72, 76, 74, 77, 79, 81, 77, 74, 72, 69],
   },
   race: {
-    bpm: 164,
+    bpm: 116,
     roots: [38, 46, 41, 48],
     motif: [74, 81, 77, 74, 84, 81, 79, 77, 74, 77, 81, 86, 84, 81, 77, 72],
   },
   coast: {
-    bpm: 148,
+    bpm: 124,
     roots: [48, 53, 45, 55],
     motif: [76, 79, 84, 83, 79, 76, 74, 79, 81, 84, 88, 84, 83, 79, 76, 74],
   },
@@ -97,7 +97,7 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
         time + (j * beat) / 2,
         beat * 0.65,
         c.motif[(bar * 4 + j) % 16],
-        name === 'menu' ? 0.047 : 0.061,
+        name === 'menu' ? 0.047 : name === 'race' ? 0.043 : 0.053,
         'lead',
       );
       drum(b, time + (j * beat) / 2, 'hat', 0.035);
@@ -107,9 +107,10 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
         note(b, time + beat * step, beat * 0.23, root + 36, 0.048, 'lead');
     }
     drum(a, time, 'kick', 0.22);
-    drum(a, time + beat * 2.5, 'kick', 0.16);
-    drum(a, time + beat, 'snare', name === 'menu' ? 0.045 : 0.11);
-    drum(a, time + beat * 3, 'snare', name === 'menu' ? 0.045 : 0.11);
+    if (name === 'coast') for (const step of [1, 2, 3]) drum(a, time + beat * step, 'kick', 0.14);
+    else drum(a, time + beat * 2.5, 'kick', 0.16);
+    drum(a, time + beat, 'snare', name === 'menu' ? 0.045 : name === 'race' ? 0.065 : 0.075);
+    drum(a, time + beat * 3, 'snare', name === 'menu' ? 0.045 : name === 'race' ? 0.065 : 0.075);
     drum(b, time + beat * 1.5, 'kick', 0.15);
     drum(b, time + beat * 3.5, 'snare', 0.08);
     note(b, time + beat * 2, beat * 1.8, root + 31, 0.038, 'lead');

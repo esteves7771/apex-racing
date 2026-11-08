@@ -1,3 +1,4 @@
+import { VehicleTrim } from './VehicleTrim';
 import { useRef } from 'react';
 import { useFrame, extend, type ThreeElement } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -98,6 +99,7 @@ export function CarVisual({
   return (
     <group name="bodyRoot">
       <group ref={body} name="visualBody">
+        <VehicleTrim id={selected}/>
         {selected !== 'sprinter' ? (
           <VehicleBody key={selected} id={selected} color={color} brakes={brakes} />
         ) : (
@@ -214,11 +216,11 @@ export function CarVisual({
           >
             <group>
               <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.38, 0.38, 0.33, 12]} />
+                <cylinderGeometry args={[0.38, 0.38, 0.33, 16]} />
                 <meshStandardMaterial color="#202f36" roughness={0.9} />
               </mesh>
               <mesh position={[Math.sign(x) * 0.176, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.22, 0.22, 0.025, 8]} />
+                <cylinderGeometry args={[0.24, 0.24, 0.035, 12]} />
                 <meshStandardMaterial color="#f8e9ba" metalness={0.4} />
               </mesh>
               <mesh position={[Math.sign(x) * 0.195, 0, 0]}>

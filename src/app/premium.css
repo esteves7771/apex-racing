@@ -1,0 +1,672 @@
+.interface:has(.premium-menu) {
+  background:
+    linear-gradient(90deg, #072e2bea 0%, #0b302c77 35%, transparent 65%),
+    linear-gradient(0deg, #082b28f2 0%, transparent 50%);
+}
+.interface:has(.premium-menu) > .topbar {
+  display: none;
+}
+.premium-menu {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 76px 1fr auto 48px;
+  gap: 22px;
+  padding: 0 2.6%;
+  color: #f6f7e9;
+}
+.premium-menu button,
+.premium-menu select {
+  pointer-events: auto;
+}
+.club-header {
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  border-bottom: 1px solid #d6e8cf18;
+}
+.club-brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  white-space: nowrap;
+}
+.club-brand b,
+.club-footer b {
+  font-size: 31px;
+  font-weight: 950;
+  font-style: italic;
+  letter-spacing: -2px;
+}
+.club-brand b span,
+.club-footer b span {
+  color: #ffd253;
+}
+.club-brand small {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.club-header nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+}
+.club-header nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 12px 17px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.club-header nav button.selected {
+  background: #ffd253;
+  color: #103d39;
+  box-shadow: 0 0 24px #f6d35e20;
+}
+.club-header nav button:hover {
+  background: #ffffff16;
+}
+.club-header nav button.selected:hover {
+  background: #ffe18b;
+}
+.club-header nav i {
+  font-style: normal;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1;
+}
+.club-version {
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.club-hero {
+  grid-row: 2;
+  align-self: center;
+  margin: 0 0 20px 1%;
+  width: min(36vw, 560px);
+}
+.club-hero .eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.8px;
+}
+.club-hero h1 {
+  font-size: clamp(53px, 5.3vw, 98px);
+  letter-spacing: -3.8px;
+  line-height: 1.02;
+  margin: 22px 0;
+}
+.club-hero h1 em {
+  color: #ffd253;
+}
+.club-hero p {
+  line-height: 1.8;
+  color: #d8e5db;
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+.club-start {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 410px;
+  font-size: 20px;
+  padding: 18px 24px;
+  border: 1px solid #ffe88e;
+  border-radius: 9px;
+  background: linear-gradient(110deg, #ffd95f, #ffcd3b);
+  color: #123d36;
+}
+.race-summary {
+  display: block;
+  margin-top: 13px;
+  color: #bfd4c5;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+}
+.club-panel {
+  background: linear-gradient(125deg, #153d38ee, #10372fd9);
+  border: 1px solid #9cccb17a;
+  border-radius: 11px;
+  box-shadow:
+    0 10px 32px #001d2525,
+    inset 0 1px #d5efcb18;
+  text-align: left;
+  color: inherit;
+}
+.club-panel .eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  display: block;
+  color: #eef2df;
+}
+.club-circuit {
+  position: absolute;
+  right: 2.6%;
+  top: 27%;
+  width: min(27vw, 420px);
+  padding: 22px 24px;
+  border-color: #e8cd69a0;
+}
+.club-circuit select {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #c9e0ce;
+  font-size: 11px;
+}
+.club-circuit option,
+.club-cards option {
+  background: #163c36;
+  color: #f6f7e9;
+}
+.circuit-title {
+  display: flex;
+  align-items: center;
+  min-height: 96px;
+  gap: 14px;
+}
+.circuit-title h2 {
+  font-size: clamp(25px, 2.1vw, 36px);
+  line-height: 1.08;
+  margin: 10px 0;
+  letter-spacing: -1px;
+}
+.circuit-title svg {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  color: #bbe4c7;
+  filter: drop-shadow(0 0 5px #87c4a950);
+}
+.circuit-facts {
+  display: flex;
+  gap: 17px;
+  border-top: 1px solid #b4cdb733;
+  border-bottom: 1px solid #b4cdb733;
+  padding: 13px 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+.circuit-facts small {
+  display: block;
+  font-size: 8px;
+  color: #b5cfc2;
+  font-weight: 400;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+.club-circuit p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d0dfcf;
+  margin: 12px 0;
+}
+.club-text {
+  background: transparent;
+  color: #dbe6d5;
+  padding: 0;
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+.club-cards {
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: 1.45fr 1fr 0.8fr 1.08fr 1.12fr;
+  gap: 12px;
+  min-width: 0;
+}
+.club-cards > .club-panel {
+  padding: 17px 18px;
+  min-width: 0;
+  min-height: 172px;
+}
+button.club-panel:hover {
+  border-color: #f6d35e;
+  transform: translateY(-2px);
+}
+.club-cards .eyebrow > span {
+  float: right;
+  color: #ffd253;
+}
+.car-card-body {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+}
+.car-portrait {
+  width: 48%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 8px #001d2450);
+}
+.car-card-body > div {
+  flex: 1;
+  min-width: 0;
+}
+.car-card h3 {
+  white-space: pre-line;
+  font-size: 16px;
+  line-height: 1.1;
+  margin: 7px 0 13px;
+}
+.car-card label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  gap: 8px;
+  line-height: 1.8;
+  color: #d1e0cf;
+}
+.car-card meter {
+  width: 45%;
+  height: 9px;
+  accent-color: #ffd253;
+}
+meter::-webkit-meter-bar {
+  background: #547366;
+  border: 0;
+}
+meter::-webkit-meter-optimum-value {
+  background: #ffd253;
+}
+.club-cards select {
+  display: block;
+  width: 100%;
+  color: #f7f5e7;
+  border: 0;
+  background: transparent;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+  margin: 23px 0 8px;
+  padding: 0;
+}
+.club-cards select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.club-cards p {
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 8px 0;
+  color: #e1e9d8;
+}
+.club-cards small {
+  display: block;
+  font-size: 9px;
+  color: #b4ccc0;
+  line-height: 1.5;
+}
+.difficulty-bars {
+  color: #ffd253;
+  font-size: 24px;
+  margin: 14px 0 -14px;
+  text-align: center;
+  letter-spacing: 3px;
+}
+.difficulty-card select {
+  text-align: center;
+  margin-top: 23px;
+  font-size: 22px;
+}
+.difficulty-card small {
+  text-align: center;
+  margin-top: 12px;
+}
+.best-card > strong {
+  display: block;
+  font-size: clamp(18px, 1.7vw, 29px);
+  line-height: 1.15;
+  margin-top: 32px;
+  letter-spacing: -0.8px;
+}
+.quick-card > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 11px;
+}
+.quick-card > label button {
+  background: transparent;
+  color: #ffd253;
+  padding: 0;
+  font-size: 19px;
+}
+.quick-card input {
+  width: 50%;
+  margin-left: auto;
+  accent-color: #ffd253;
+  min-width: 0;
+}
+.quick-card label select {
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0 0 0 auto;
+  width: 52%;
+  letter-spacing: 0;
+}
+.quick-card > .club-text:last-child {
+  margin-top: 14px;
+}
+.club-footer {
+  grid-row: 4;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  border-top: 1px solid #9ebead80;
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+.club-footer b {
+  font-size: 18px;
+}
+.club-footer small {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0;
+  color: #cfdecf;
+}
+.club-footer kbd {
+  border: 1px solid #aecab188;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font: inherit;
+}
+.circuit-dialog {
+  width: min(860px, 90vw);
+  max-width: 860px;
+}
+.circuit-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 20px 0;
+}
+.destination {
+  background: linear-gradient(145deg, #29594b, #133936);
+  border: 1px solid #8fac9a;
+  color: #f4f6e9;
+  text-align: left;
+  border-radius: 12px;
+  padding: 20px;
+}
+.destination:nth-child(2) {
+  background: linear-gradient(145deg, #277e80, #143e42);
+}
+.destination.selected {
+  border-color: #f6d35e;
+}
+.destination svg {
+  width: 100%;
+  height: 135px;
+  color: #ccedcf;
+}
+.destination strong,
+.destination small {
+  display: block;
+  margin-top: 8px;
+}
+.destination strong {
+  color: #ffd253;
+  font-size: 24px;
+}
+.setup-car {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+.setup-car select {
+  margin-left: 12px;
+  background: #173f38;
+  color: inherit;
+  padding: 7px;
+  border: 1px solid #708f7e;
+  border-radius: 5px;
+}
+.garage-dialog {
+  background: linear-gradient(135deg, #17483f, #102e2e);
+  border: 1px solid #8ab39d88;
+}
+.garage-dialog .showroom {
+  border-radius: 12px;
+  overflow: hidden;
+}
+.garage-dialog h3 {
+  font-size: 28px;
+  letter-spacing: -1px;
+}
+.dialog {
+  box-shadow: 0 20px 80px #001c2c77;
+  border: 1px solid #88af9770;
+}
+@media (min-width: 1900px) {
+  .premium-menu {
+    grid-template-rows: 90px 1fr auto 60px;
+    gap: 30px;
+    padding: 0 3%;
+  }
+  .club-cards > .club-panel {
+    min-height: 200px;
+    padding: 22px;
+  }
+  .club-circuit {
+    right: 3%;
+  }
+  .club-hero {
+    margin-left: 1%;
+  }
+  .club-header nav button {
+    font-size: 16px;
+    padding: 13px 22px;
+  }
+  .club-cards p {
+    font-size: 13px;
+  }
+  .club-cards small {
+    font-size: 11px;
+  }
+  .car-card h3 {
+    font-size: 21px;
+  }
+  .car-card label {
+    font-size: 11px;
+  }
+  .best-card > strong {
+    margin-top: 35px;
+  }
+  .quick-card > label,
+  .quick-card label select,
+  .club-text {
+    font-size: 13px;
+  }
+}
+@media (max-width: 1450px) {
+  .premium-menu {
+    gap: 16px;
+    grid-template-rows: 65px 1fr auto 40px;
+    padding: 0 2%;
+  }
+  .club-brand small {
+    display: none;
+  }
+  .club-header {
+    gap: 20px;
+  }
+  .club-header nav {
+    gap: 3px;
+  }
+  .club-header nav button {
+    font-size: 12px;
+    padding: 10px 13px;
+  }
+  .club-hero {
+    width: 38vw;
+    margin-bottom: 5px;
+  }
+  .club-hero h1 {
+    font-size: 64px;
+    margin: 16px 0;
+  }
+  .club-hero p {
+    font-size: 12px;
+    margin-bottom: 18px;
+  }
+  .club-start {
+    font-size: 18px;
+    padding: 16px 20px;
+    max-width: 350px;
+  }
+  .club-circuit {
+    top: 23%;
+    right: 2%;
+    padding: 18px;
+    width: 28%;
+  }
+  .circuit-title {
+    min-height: 80px;
+  }
+  .circuit-title svg {
+    width: 80px;
+    height: 80px;
+  }
+  .circuit-facts {
+    gap: 10px;
+    font-size: 10px;
+  }
+  .club-cards {
+    gap: 9px;
+    grid-template-columns: 1.35fr 0.95fr 0.78fr 1.02fr 1.1fr;
+  }
+  .club-cards > .club-panel {
+    padding: 14px 13px;
+    min-height: 160px;
+  }
+  .car-card h3 {
+    font-size: 14px;
+  }
+  .car-card label {
+    font-size: 8px;
+  }
+  .club-cards select {
+    font-size: 18px;
+  }
+  .best-card > strong {
+    font-size: 19px;
+  }
+  .club-version {
+    font-size: 8px;
+  }
+}
+@media (max-height: 760px) and (min-width: 1100px) {
+  .premium-menu {
+    gap: 12px;
+    grid-template-rows: 58px 1fr auto 34px;
+  }
+  .club-hero h1 {
+    font-size: 56px;
+  }
+  .club-hero p {
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+  .club-cards > .club-panel {
+    min-height: 145px;
+  }
+  .club-circuit {
+    top: 20%;
+    padding: 15px;
+  }
+  .club-circuit p {
+    font-size: 11px;
+  }
+  .circuit-title {
+    min-height: 65px;
+  }
+  .club-circuit .club-text {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-menu * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.race-setup {
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-bottom: 16px;
+}
+.race-setup h1 {
+  font-size: 42px;
+  letter-spacing: -2px;
+  margin: 14px 0;
+}
+.race-setup > p {
+  font-size: 12px;
+  margin: 8px 0 14px;
+}
+@media (min-width: 1100px) {
+  .race-setup {
+    top: 100px;
+  }
+  .race-setup .record {
+    margin-top: 20px;
+    padding-top: 14px;
+  }
+}
+.interface:has(.premium-menu) .dev-tools {
+  display: none;
+}
+.physics-debug-toggle:not(:has(input)) {
+  opacity: 0;
+  pointer-events: none;
+}
+.physics-debug-toggle:hover,
+.physics-debug-toggle:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.menu-icon {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+}
+
+.destination-image {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 7px;
+  display: block;
+  margin-bottom: 12px;
+}
+.destination svg {
+  float: right;
+  width: 95px;
+  height: 105px;
+}

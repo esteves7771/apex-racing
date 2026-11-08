@@ -1,3 +1,6 @@
+import { useModalFocus } from './useModalFocus';
+import { racingLineAt } from '../ai/RacingLine';
+import { PremiumMenu } from './PremiumMenu';
 import { useTouchDevice } from '../input/device';
 import { trackId, selectTrack, tracks, type TrackId } from '../track/ActiveTrack';
 import { useEffect, useState } from 'react';
@@ -58,6 +61,7 @@ export function startRace(mode: Mode) {
   clearDrivingInput();
   unlockAudio();
   const settings = useGame.getState().save.settings;
+  if (mode === 'gp') racingLineAt(0, settings.difficulty);
   race.start(mode, { vehicle: settings.vehicle, difficulty: settings.difficulty });
   telemetry.resetSerial++;
   useGame.getState().publish();
@@ -209,6 +213,12 @@ export function Interface() {
     [tips, setTips] = useState(!save.settings.controlsSeen),
     [tuning, setTuning] = useState(false);
   const [cupSetup, setCupSetup] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<Mode>('time');
+  const menuMode = selectedMode === 'challenge' && trackId !== 'pine' ? 'time' : selectedMode;
+  useModalFocus(!!panel || cupSetup, () => {
+    setPanel(null);
+    setCupSetup(false);
+  });
   const phase = race.phase,
     active = ['COUNTDOWN', 'RACING', 'FINISHING', 'PAUSED'].includes(phase);
   const near = nearestTrack(telemetry.x, telemetry.z),
@@ -230,12 +240,14 @@ export function Interface() {
       if (race.phase === 'MENU') {
         race.phase = 'MODE_SELECT';
         useGame.getState().publish();
-      } else if (race.phase === 'MODE_SELECT' || race.phase === 'RESULTS')
-        startRace(race.phase === 'RESULTS' ? race.mode : 'time');
+      } else if (race.phase === 'MODE_SELECT') {
+        if (menuMode === 'gp') setCupSetup(true);
+        else startRace(menuMode);
+      } else if (race.phase === 'RESULTS') startRace(race.mode);
     };
     window.addEventListener('keydown', enter);
     return () => window.removeEventListener('keydown', enter);
-  }, [panel, cupSetup]);
+  }, [panel, cupSetup, menuMode]);
   const quit = () => {
     race.phase = 'MENU';
     clearDrivingInput();
@@ -249,17 +261,38 @@ export function Interface() {
           APEX<span> / </span>
         </div>
         <span>APEX MOTOR CLUB</span>
-        <span className="version">LOCAL EDITION · 0.6.1</span>
+        <span className="version">LOCAL EDITION · 0.7.1</span>
       </header>
-      {['MENU', 'MODE_SELECT'].includes(phase) && (
+      {phase === 'MENU' && !touch && (
+        <PremiumMenu
+          blocked={!!panel || cupSetup}
+          active={panel ?? (cupSetup ? 'gp' : 'race')}
+          open={setPanel}
+          changeTrack={changeTrack}
+          mode={menuMode}
+          setMode={setSelectedMode}
+          configure={(gp) => {
+            if (gp) setCupSetup(true);
+            else {
+              race.phase = 'MODE_SELECT';
+              useGame.getState().publish();
+            }
+          }}
+        />
+      )}
+      {(phase === 'MODE_SELECT' || (phase === 'MENU' && touch)) && (
         <>
-          <main className="menu">
+          <main className={phase === 'MODE_SELECT' ? 'menu race-setup' : 'menu'}>
             {touch && phase === 'MODE_SELECT' && (
               <p className="touch-intro">
                 Hold GO + steering together · landscape recommended. CAM changes view; Ⅱ pauses.
               </p>
             )}
-            <div className="eyebrow">THREE PERSONALITIES. YOUR RACING LINE.</div>
+            <div className="eyebrow">
+              {phase === 'MODE_SELECT'
+                ? 'RACE SETUP / ' + TRACK_INFO.name.toUpperCase()
+                : 'THREE PERSONALITIES. YOUR RACING LINE.'}
+            </div>
             <h1>
               Find your
               <br />
@@ -292,7 +325,28 @@ export function Interface() {
               </>
             ) : (
               <>
-                <button className="primary" onClick={() => startRace('time')}>
+                <label className="setup-car">
+                  Vehicle
+                  <select
+                    aria-label="Race vehicle"
+                    value={vehicle.id}
+                    onChange={(e) =>
+                      useGame.getState().settings({ vehicle: e.target.value as typeof vehicle.id })
+                    }
+                  >
+                    <option value="sprinter">APEX-01 Sprinter</option>
+                    <option value="vortex">APEX-02 Vortex</option>
+                    <option value="bolt">APEX-03 Bolt</option>
+                  </select>
+                </label>
+                <button
+                  className="primary"
+                  aria-label="Confirm race setup"
+                  onClick={() => (menuMode === 'gp' ? setCupSetup(true) : startRace(menuMode))}
+                >
+                  Start {modeDefinitions[menuMode].label} <span>CONFIRM →</span>
+                </button>
+                <button className="secondary" onClick={() => startRace('time')}>
                   Time attack <span>3 LAPS →</span>
                 </button>
                 <button className="secondary" onClick={() => startRace('free')}>
@@ -405,7 +459,7 @@ export function Interface() {
                 : formatTime(
                     race.mode === 'gp'
                       ? (race.gp.player.progress.finishTime ?? race.elapsed)
-                      : race.elapsed - race.lapStart,
+                      : (race.finishTime ?? race.elapsed - race.lapStart),
                   )}
             </strong>
             <div className="time-row">
@@ -557,8 +611,28 @@ export function Interface() {
       )}
       {phase === 'FINISHING' && (
         <div className="cup-wait glass">
-          Finished P{race.gp.position} · rivals racing
-          <small>Remaining drivers have up to 20 seconds. Unfinished entries are DNF.</small>
+          {race.mode === 'gp' ? `Finished P${race.gp.position}` : 'FINISH LINE'} ·{' '}
+          {formatTime(race.finishTime)}
+          <small>
+            {race.mode === 'gp'
+              ? 'Cooldown drive · rivals can finish for up to 20 seconds.'
+              : 'Clean finish · cooldown drive'}
+          </small>
+          <button
+            className="text-button"
+            onClick={() => {
+              race.skipFinish();
+              useGame.getState().publish();
+            }}
+          >
+            Show results
+          </button>
+          <button className="text-button" onClick={() => startRace(race.mode)}>
+            Retry
+          </button>
+          <button className="text-button" onClick={quit}>
+            Main menu
+          </button>
         </div>
       )}
       {phase === 'RESULTS' && race.mode === 'gp' && (
@@ -593,7 +667,11 @@ export function Interface() {
                   </b>
                   <small>{getVehicle(r.vehicle).name}</small>
                   <strong>
-                    {r.progress.finishTime === null ? 'DNF' : formatTime(r.progress.finishTime)}
+                    {r.progress.finishTime === null
+                      ? r.progress.dnf
+                        ? 'DNF'
+                        : 'Racing…'
+                      : formatTime(r.progress.finishTime)}
                   </strong>
                 </li>
               ))}
@@ -672,7 +750,12 @@ export function Interface() {
       )}
       {panel && (
         <div className="scrim">
-          <section className={`dialog ${panel === 'garage' ? 'garage-dialog' : ''}`}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={panel + ' settings'}
+            className={`dialog ${panel === 'garage' ? 'garage-dialog' : ''}`}
+          >
             <div className="eyebrow">APEX / {panel.toUpperCase()}</div>
             <h2>
               {panel === 'garage'
@@ -696,7 +779,12 @@ export function Interface() {
       )}
       {cupSetup && (
         <div className="scrim">
-          <section className="dialog cup-setup">
+          <section
+            className="dialog cup-setup"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Grand Prix setup"
+          >
             <div className="eyebrow">GRAND PRIX / {TRACK_INFO.name.toUpperCase()}</div>
             <h2>Meet your rivals.</h2>
             <p>3 laps · 4 physical cars · clean circuit · no catch-up boosts</p>

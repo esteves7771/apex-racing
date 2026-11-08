@@ -87,13 +87,14 @@ export function shoreTexture() {
 export function frondGeometry() {
   const p: number[] = [],
     indices: number[] = [];
-  for (let i = 0; i <= 6; i++) {
-    const u = i / 6,
-      width = Math.sin(Math.PI * u) * 0.65;
-    for (const side of [-1, 1]) p.push(width * side, 0.65 * Math.sin(u * Math.PI) - u * 0.8, u * 4);
-    if (i < 6) {
-      const a = i * 2;
-      indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  for (let i = 0; i <= 9; i++) {
+    const u = i / 9,
+      width = Math.sin(Math.PI * u) * 0.85 * (i % 2 ? 0.88 : 1),
+      y = 0.8 * Math.sin(u * Math.PI) - u * 0.85;
+    p.push(-width, y - 0.13, u * 4.7, 0, y + 0.1, u * 4.7, width, y - 0.13, u * 4.7);
+    if (i < 9) {
+      const a = i * 3;
+      indices.push(a, a + 3, a + 1, a + 1, a + 3, a + 4, a + 1, a + 4, a + 2, a + 2, a + 4, a + 5);
     }
   }
   const g = new THREE.BufferGeometry();

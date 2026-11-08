@@ -1,3 +1,7 @@
+import { coastEdgePoint, coastArtTrack, edgeRibbon } from './CoastEdges';
+import { landSection } from './CoastLandscape';
+import { continuousRail, bridgeDeck } from './RoadArt';
+import { TropicalWorld } from './WorldDetails';
 import { shaderSnapshot } from '../render/ShaderWarmup';
 import { useLayoutEffect, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -13,27 +17,63 @@ import { RaceVenue } from './RaceVenue';
 const box = new THREE.BoxGeometry();
 export const coastRoad = coast.ribbon(-7.25, 7.25, 0.035),
   coastTerrain = coast.terrainGeometry();
-const asphalt = coast.ribbon(-6, 6, 0.045),
-  leftLine = coast.ribbon(-5.8, -5.6, 0.055),
-  rightLine = coast.ribbon(5.6, 5.8, 0.055);
-export const coastBarriers = coast.samples
-  .filter((_, i) => i % 5 === 0)
-  .flatMap((s, i) =>
-    [-1, 1].map((side) => {
-      const next = coast.samples[((i + 1) * 5) % coast.SEGMENTS],
-        a = s.p.clone().addScaledVector(s.side, 7.6 * side),
-        b = next.p.clone().addScaledVector(next.side, 7.6 * side),
-        d = b.clone().sub(a),
-        p = a.clone().add(b).multiplyScalar(0.5);
-      p.y = coast.roadHeight(s.t, side * 7.6);
-      return { p, yaw: Math.atan2(d.x, d.z), length: d.length() + 0.22 };
-    }),
+const visualShoulder = edgeRibbon(-7.25, 7.25, 0.035);
+const asphalt = edgeRibbon(-6, 6, 0.045),
+  leftLine = edgeRibbon(-5.8, -5.6, 0.055),
+  rightLine = edgeRibbon(5.6, 5.8, 0.055);
+export const coastBarriers = coast.samples.flatMap((s, i) => {
+  const local = i >= 1620 && i < 1710;
+  if (!local && i % 5 !== 0) return [];
+  const next = coast.samples[(i + (local ? 1 : 5)) % coast.SEGMENTS];
+  return [-1, 1].flatMap((side) => {
+    const a = coastEdgePoint(s.t, 7.6 * side),
+      b = coastEdgePoint(next.t, 7.6 * side),
+      d = b.clone().sub(a);
+    if (d.length() < 0.05) return [];
+    const p = a.clone().add(b).multiplyScalar(0.5);
+    p.y = coast.roadHeight(s.t, side * 7.6);
+    return [{ p, yaw: Math.atan2(d.x, d.z), length: d.length() + (local ? 0.02 : 0.22) }];
+  });
+});
+const deck = bridgeDeck(coastArtTrack, (t) => !landSection(t));
+const railSurface = continuousRail(
+  coastArtTrack,
+  7.6,
+  0.3,
+  0.22,
+  0.95,
+  (t) => !!coast.tunnelAt(t, 0.003),
+);
+const railLow = continuousRail(
+  coastArtTrack,
+  7.6,
+  0.18,
+  0.14,
+  0.42,
+  (t) => !!coast.tunnelAt(t, 0.003),
+);
+const rawEdgePosts = coast.samples
+  .filter((s, i) => i % 4 === 0 && !coast.tunnelAt(s.t, 0.003))
+  .flatMap((s) =>
+    [-1, 1].map((side) => ({
+      position: coastEdgePoint(s.t, side * 7.6).setY(coast.roadHeight(s.t, side * 7.6) + 0.5),
+      scale: new THREE.Vector3(0.16, 1, 0.18),
+      rotation: coast.poseAt(s.t).yaw,
+    })),
   );
-const rails = coastBarriers.map((b) => ({
-  position: b.p.clone().add(new THREE.Vector3(0, 0.85, 0)),
-  scale: new THREE.Vector3(0.32, 0.75, b.length),
-  rotation: b.yaw,
-}));
+const edgePosts = [
+  ...new Map(
+    rawEdgePosts.map((p) => [
+      p.position
+        .toArray()
+        .map((x) => x.toFixed(4))
+        .join(','),
+      p,
+    ]),
+  ).values(),
+];
+const warning = coastEdgePoint(0.918, -11);
+warning.y = coast.roadHeight(0.918);
 export function tunnelGeometry() {
   const positions: number[] = [],
     indices: number[] = [];
@@ -75,7 +115,7 @@ function TunnelCollider() {
   return null;
 }
 function paintedKerb(side: number) {
-  const g = coast.ribbon(side < 0 ? -6.8 : 6, side < 0 ? -6 : 6.8, 0.052),
+  const g = edgeRibbon(side < 0 ? -6.8 : 6, side < 0 ? -6 : 6.8, 0.052),
     p = g.getAttribute('position'),
     colors = [];
   const a = new THREE.Color('#ed886e'),
@@ -121,7 +161,7 @@ export function CoastWorld({ qualityKey = 'high' }: { qualityKey?: string }) {
       <PrepareCoastShaders qualityKey={qualityKey} />
       <GroundColliders road={coastRoad} terrain={coastTerrain} />
       <TunnelCollider />
-      <mesh geometry={coastRoad} receiveShadow>
+      <mesh geometry={visualShoulder} receiveShadow>
         <meshStandardMaterial color="#e5bd81" roughness={1} />
       </mesh>
       <mesh geometry={asphalt} receiveShadow>
@@ -138,9 +178,26 @@ export function CoastWorld({ qualityKey = 'high' }: { qualityKey?: string }) {
         </mesh>
       ))}
       <CoastTunnels shell={cavern} />
-      <CoastArt />
+      <CoastArt preset={qualityKey} />
+      <TropicalWorld preset={qualityKey} />
+      <mesh geometry={deck} receiveShadow>
+        <meshStandardMaterial color="#c6c2a9" roughness={0.9} />
+      </mesh>
       <RaceVenue />
-      <Instances items={rails} geometry={box} color="#e9dcb6" />
+      <group position={warning} rotation={[0, coast.poseAt(0.918).yaw, 0]}>
+        <TrackLabel text="TIGHT TURN / SLOW" position={[0, 2.7, 0]} width={4} height={0.8} />
+        <mesh position={[0, 1.3, 0]}>
+          <boxGeometry args={[0.12, 2.6, 0.12]} />
+          <meshStandardMaterial color="#e9dcb6" />
+        </mesh>
+      </group>
+      <mesh geometry={railSurface} receiveShadow>
+        <meshStandardMaterial color="#eadfc0" roughness={0.65} />
+      </mesh>
+      <mesh geometry={railLow}>
+        <meshStandardMaterial color="#c1c6ad" roughness={0.7} />
+      </mesh>
+      <Instances items={edgePosts} geometry={box} color="#a8b2a2" shadow={false} />
       <RigidBody type="fixed" colliders={false}>
         {coastBarriers.map((b, i) => (
           <CuboidCollider

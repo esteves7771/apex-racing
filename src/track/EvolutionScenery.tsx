@@ -1,3 +1,4 @@
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { Instances } from './InstancedProps';
@@ -141,11 +142,26 @@ export function TrackLabel({
     ctx.fillText(text, 512, 133, 960);
     return new THREE.CanvasTexture(canvas);
   }, [text]);
-  useEffect(() => () => texture.dispose(), [texture]);
+  const signGeometry = useMemo(() => {
+    const front = new THREE.PlaneGeometry(width, height),
+      back = new THREE.PlaneGeometry(width, height);
+    back.rotateY(Math.PI);
+    back.translate(0, 0, -0.015);
+    const g = mergeGeometries([front, back]);
+    front.dispose();
+    back.dispose();
+    return g;
+  }, [width, height]);
+  useEffect(
+    () => () => {
+      texture.dispose();
+    },
+    [texture],
+  );
+  useEffect(() => () => signGeometry.dispose(), [signGeometry]);
   return (
-    <mesh position={position} rotation={[0, rotation, 0]}>
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
+    <mesh position={position} rotation={[0, rotation, 0]} geometry={signGeometry}>
+      <meshBasicMaterial map={texture} side={THREE.FrontSide} />
     </mesh>
   );
 }

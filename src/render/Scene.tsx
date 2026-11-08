@@ -1,3 +1,7 @@
+import { WorldLife } from './WorldLife';
+import { Atmosphere } from './Atmosphere';
+import { MenuStage, menuPose } from './MenuStage';
+import { VehiclePortraitCapture } from '../ui/VehiclePortrait';
 import { touchDevice } from '../input/device';
 import {
   graphicsPresets,
@@ -39,15 +43,17 @@ function Sun({ size }: { size: number }) {
   }, [size]);
   useFrame(() => {
     if (ref.current) {
-      ref.current.position.copy(carPosition).add(new THREE.Vector3(35, 55, 25));
-      ref.current.target.position.copy(carPosition);
+      const center = ['MENU','MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition;
+      ref.current.position.copy(center).add(new THREE.Vector3(35,55,25));
+      ref.current.target.position.copy(['MENU','MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition);
       ref.current.target.updateMatrixWorld();
     }
   }, FRAME_ORDER.lighting);
   return (
     <directionalLight
       ref={ref}
-      intensity={3.1}
+      intensity={3.25}
+      color="#fff0d0"
       castShadow
       position={[35, 55, 25]}
       shadow-mapSize={[size, size]}
@@ -131,9 +137,11 @@ export function Scene({ onReady }: { onReady: () => void }) {
       }
     >
       <color attach="background" args={[trackId === 'pine' ? '#b7dace' : '#b6e4e0']} />
-      <fog attach="fog" args={['#b7dace', 260, 850]} />
-      <hemisphereLight args={['#f8ecd4', '#668f81', 2]} />
+      <fog attach="fog" args={[trackId==='pine'?'#b8cfc0':'#a6d4cf', 220, 1100]} />
+      <hemisphereLight args={['#e2eddd', '#506f58', 1.6]} />
       <Sun size={graphics.shadowSize} />
+      <Atmosphere track={selectedTrack} />
+      <WorldLife track={selectedTrack} />
       <GraphicsMonitor enabled={quality === 'auto'} lower={() => setAuto((p) => lowerPreset(p))} />
       <Suspense fallback={null}>
         <Physics
@@ -145,7 +153,7 @@ export function Scene({ onReady }: { onReady: () => void }) {
           updatePriority={FRAME_ORDER.physics}
         >
           <Ready onReady={onReady} />
-          {trackId === 'pine' ? <TrackMesh /> : <CoastWorld qualityKey={preset} />}
+          {trackId === 'pine' ? <TrackMesh preset={preset} /> : <CoastWorld qualityKey={preset} />}
           <ArcadeVehicleController />
           <AIOpponents />
           {trackId === 'pine' && <Obstacles />}
@@ -156,6 +164,8 @@ export function Scene({ onReady }: { onReady: () => void }) {
         {trackId === 'pine' && <LivingWorld />}
         {import.meta.env.DEV && <AIDiagnostics key={`ai-lines-${selectedTrack}`} />}
       </Suspense>
+      <MenuStage />
+      <VehiclePortraitCapture />
       <FollowCamera key={`camera-${selectedTrack}`} />
       {import.meta.env.DEV && <FrameObserver />}
     </Canvas>

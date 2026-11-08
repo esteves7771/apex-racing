@@ -43,6 +43,8 @@ describe('race contract', () => {
         r.gate(i);
       }
     }
+    expect(r.phase).toBe('FINISHING');
+    r.tick(4);
     expect(r.phase).toBe('RESULTS');
     expect(r.laps).toEqual([80, 80, 80]);
     expect(r.elapsed).toBe(240);

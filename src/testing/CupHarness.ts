@@ -3,7 +3,7 @@ import { coastBarriers, cavern } from '../track/CoastWorld';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GrandPrixDirector, gridSpawn } from '../game/GrandPrix';
 import { RacingAI, rivals, type Difficulty } from '../ai/RacingAI';
-import { getVehicle } from '../vehicle/VehicleRegistry';
+import { getVehicle, type VehicleId } from '../vehicle/VehicleRegistry';
 import { applyVehicleCommand } from '../vehicle/VehicleDynamics';
 import { ribbon, terrainGeometry } from '../track/PineValley';
 import { createGroundCollider } from '../track/GroundColliders';
@@ -16,9 +16,11 @@ export function runCup(
   traffic = true,
   maxSeconds = 430,
   seed?: number,
+  solo?: VehicleId,
 ) {
   const gp = new GrandPrixDirector();
   gp.start('sprinter', difficulty);
+  if (solo) gp.racers = [gp.player, gp.racers.find((r) => r.vehicle === solo && r.ai)!];
   const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   const road = trackId === 'pine' ? ribbon(-6, 6, 0.035) : coast.ribbon(-7.25, 7.25, 0.035),
     terrain = trackId === 'pine' ? terrainGeometry() : coast.terrainGeometry();
@@ -45,6 +47,10 @@ export function runCup(
     ticks: 0,
     distance: 0,
     brakeTicks: 0,
+    invalidTicks: 0,
+    offroadTicks: 0,
+    maxLateral: 0,
+    saturatedTicks: 0,
     throttleTicks: 0,
     contacts: 0,
     contactActive: false,
@@ -75,10 +81,12 @@ export function runCup(
         .setContactSkin(0.04),
       r.body,
     );
+    if (solo && !r.ai) r.body.collider(0).setEnabled(false);
     r.ai?.reset(s.t);
   }
   for (let i = 0; i < 90; i++) world.step();
   const probes: unknown[] = [];
+  const resetEvents: unknown[] = [];
   const traces: { time: number; racers: unknown[] }[] = [];
   let time = 0,
     resets = 0;
@@ -157,12 +165,44 @@ export function runCup(
           z: p.z,
           yaw,
           speed: forward,
+          lateralSpeed: lateral,
           grounded: flight.grounded,
           finished: r.progress.finishTime !== null,
         },
         others,
       );
+      if (
+        process.env.APEX_V07_PROBE &&
+        r.id === 'rex' &&
+        r.progress.laps.length === 1 &&
+        tick % 6 === 0
+      )
+        probes.push({
+          time,
+          t: ai.t,
+          speed: forward,
+          target: ai.speedTarget,
+          lateral: ai.lateral,
+          offset: ai.offset,
+          desired: ai.desiredOffset,
+          steer: ai.steer,
+          grounded: flight.grounded,
+          command: { ...cmd },
+        });
       if (ai.needsReset) {
+        resetEvents.push({
+          time,
+          id: r.id,
+          t: ai.t,
+          lateral: ai.lateral,
+          speed: forward,
+          y: p.y,
+          grounded: probe.grounded,
+          state: ai.state,
+          stuck: ai.stuck,
+          recovery: ai.recovery,
+          belowRoad: ai.belowRoad,
+        });
         if (gp.resetRacer(r.id)) {
           resets++;
           jumps[i].reset();
@@ -192,6 +232,10 @@ export function runCup(
       if (!r.ai || r.progress.finishTime !== null) return;
       m.ticks++;
       m.distance += Math.abs(r.speed) / 60;
+      m.invalidTicks += Number(r.progress.invalid);
+      m.offroadTicks += Number(Math.abs(r.ai.lateral) > 6.8);
+      m.maxLateral = Math.max(m.maxLateral, Math.abs(r.ai.lateral));
+      m.saturatedTicks += Number(Math.abs(r.ai.steer) > 0.98);
       m.brakeTicks += Number(r.ai.command.brake);
       m.throttleTicks += Number(r.ai.command.throttle);
       if (Math.abs(r.ai.steer) > 0.3 && time > 4)
@@ -199,7 +243,7 @@ export function runCup(
       const rank = gp.standings.indexOf(r);
       if (time > 5 && m.lastRank > rank) m.overtakes++;
       m.lastRank = rank;
-      const recovering = r.ai.state === 'RECOVER';
+      const recovering = ['RECOVER', 'BACK_OUT'].includes(r.ai.state);
       if (recovering && !m.recovering) m.recoveries++;
       m.recovering = recovering;
       let contact = false;
@@ -233,6 +277,18 @@ export function runCup(
           speed: r.speed,
           lateral: r.progress.lateral,
           state: r.ai?.state,
+          ai: r.ai
+            ? {
+                offset: r.ai.offset,
+                desired: r.ai.desiredOffset,
+                passing: r.ai.passingId,
+                commit: r.ai.commit,
+                target: { ...r.ai.target },
+                speedTarget: r.ai.speedTarget,
+                command: { ...r.ai.command },
+                yaw: r.yaw,
+              }
+            : undefined,
           x: r.x,
           z: r.z,
         })),
@@ -243,10 +299,15 @@ export function runCup(
   const result = {
     difficulty,
     seed,
+    solo,
     metrics: metrics.map((m, i) => ({
       id: gp.racers[i].id,
       averageSpeed: m.distance / Math.max(1 / 60, m.ticks / 60),
       brakingSeconds: m.brakeTicks / 60,
+      invalidSeconds: m.invalidTicks / 60,
+      offroadSeconds: m.offroadTicks / 60,
+      maxLateral: m.maxLateral,
+      steeringSaturation: m.saturatedTicks / Math.max(1, m.ticks),
       throttleUtilization: m.throttleTicks / Math.max(1, m.ticks),
       contactEpisodes: m.contacts,
       recoveryEvents: m.recoveries,
@@ -257,6 +318,7 @@ export function runCup(
     traffic,
     time,
     resets,
+    resetEvents,
     completed: gp.completed,
     racers: gp.racers.map((r) => ({
       id: r.id,

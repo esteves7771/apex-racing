@@ -18,7 +18,7 @@ export class MusicManager {
       challenge: compose(ctx, 'challenge'),
     };
   }
-  update(theme: Theme, speed: number, dt: number) {
+  update(theme: Theme, speed: number, dt: number, finalLap = false) {
     const now = this.ctx.currentTime;
     if (theme !== this.theme) this.pending = theme;
     else this.pending = undefined;
@@ -29,7 +29,11 @@ export class MusicManager {
       this.boundary = now + 240 / asset.bpm;
       this.active
         .at(-1)
-        ?.energy.gain.setTargetAtTime(high && this.theme !== 'results' ? 0.7 : 0, now, 0.35);
+        ?.energy.gain.setTargetAtTime(
+          (high || finalLap) && this.theme !== 'results' ? 0.7 : 0,
+          now,
+          0.35,
+        );
     }
   }
   private switch(theme: Theme) {

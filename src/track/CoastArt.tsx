@@ -225,21 +225,6 @@ const umbrellaPoles = umbrellas.map((p) => ({
   position: p.position.clone().add(new THREE.Vector3(0, -1.5, 0)),
   scale: new THREE.Vector3(0.1, 3, 0.1),
 }));
-const people = Array.from({ length: 46 }, (_, i) => {
-  const t = ((i % 23) * 1.15 - 28) / coast.TRACK_LENGTH,
-    w = i < 23 ? -13 : 13,
-    p = coastPoint((t + 1) % 1, w);
-  return {
-    position: p.add(new THREE.Vector3(0, 0.8, 0)),
-    scale: new THREE.Vector3(0.4, 1.2, 0.35),
-    rotation: i,
-  };
-});
-const heads = people.map((p) => ({
-  ...p,
-  position: p.position.clone().add(new THREE.Vector3(0, 0.85, 0)),
-  scale: new THREE.Vector3(0.32, 0.36, 0.32),
-}));
 const flags = Array.from({ length: 24 }, (_, i) => {
   const t = ((i % 12) * 5 - 35) / coast.TRACK_LENGTH,
     p = coastPoint((t + 1) % 1, i < 12 ? -11 : 11);
@@ -294,13 +279,13 @@ export function CoastalWater() {
  vec2 islandUV=(coastWorld-vec2(-400.0,-900.0))/1500.0;
  vec2 depth=texture2D(coastShore,islandUV).rg;
  float ripple=sin(coastWorld.x*.16+coastWorld.y*.09+coastTime*.7)*sin(coastWorld.y*.23-coastTime*.5);
- vec3 sea=mix(vec3(.035,.25,.37),vec3(.13,.63,.62),smoothstep(.05,.6,depth.r));
+ vec3 sea=mix(vec3(.015,.33,.38),vec3(.04,.69,.61),smoothstep(.05,.6,depth.r));
  sea=mix(sea,vec3(.42,.78,.70),smoothstep(.55,.85,depth.r));
  float foam=depth.g*smoothstep(.25,.8,sin(coastWorld.x*.6+coastWorld.y*.3+coastTime*.8)*.5+.5);
  diffuseColor.rgb=mix(sea+vec3(ripple*.012*(1.0-smoothstep(80.0,350.0,distance(cameraPosition.xz,coastWorld)))),vec3(.77,.89,.79),foam*.6);`,
         );
       };
-      m.customProgramCacheKey = () => 'coral-water-v051';
+      m.customProgramCacheKey = () => 'coral-water-v07';
       return m;
     }, [time]);
   useEffect(() => () => material.dispose(), [material]);
@@ -318,7 +303,10 @@ export function CoastalWater() {
     </mesh>
   );
 }
-export function CoastArt() {
+export function CoastArt({ preset = 'high' }: { preset?: string }) {
+  const stride = preset === 'low' ? 3 : preset === 'medium' ? 2 : 1;
+  const thin = <T,>(items: T[], group = 1) =>
+    items.filter((_, i) => Math.floor(i / group) % stride === 0);
   return (
     <group name="coral-art">
       <Instances items={lagoonRocks} geometry={rock} color="#b6b59f" />
@@ -326,16 +314,28 @@ export function CoastArt() {
         <meshStandardMaterial vertexColors flatShading roughness={1} />
       </mesh>
       <CoastalWater />
-      <Instances items={trunks} geometry={trunk} color="#94765a" />
-      <Instances items={foliage[0]} geometry={leaf} color="#397d5b" wind doubleSide />
-      <Instances items={foliage[1]} geometry={leaf} color="#63a879" wind doubleSide />
+      <Instances items={thin(trunks)} geometry={trunk} color="#94765a" />
+      <Instances
+        items={fronds.filter((_, i) => Math.floor(i / 7) % stride === 0 && i % 2 === 0)}
+        geometry={leaf}
+        color="#397d5b"
+        wind
+        doubleSide
+      />
+      <Instances
+        items={fronds.filter((_, i) => Math.floor(i / 7) % stride === 0 && i % 2 === 1)}
+        geometry={leaf}
+        color="#63a879"
+        wind
+        doubleSide
+      />
       <Instances items={greenery[0]} geometry={rock} color="#4c8c6b" wind />
       <Instances items={greenery[1]} geometry={rock} color="#74a27b" wind />
-      <Instances items={ferns} geometry={leaf} color="#4b9577" wind doubleSide />
-      <Instances items={flowers} geometry={rock} color="#df9d98" />
-      <Instances items={grasses} geometry={cone} color="#85ab80" wind shadow={false} />
-      <Instances items={treeTrunks} geometry={box} color="#89735b" />
-      <Instances items={treeCrowns} geometry={rock} color="#639578" />
+      <Instances items={thin(ferns)} geometry={leaf} color="#4b9577" wind doubleSide />
+      <Instances items={thin(flowers)} geometry={rock} color="#df9d98" />
+      <Instances items={thin(grasses)} geometry={cone} color="#85ab80" wind shadow={false} />
+      <Instances items={thin(treeTrunks)} geometry={box} color="#89735b" />
+      <Instances items={thin(treeCrowns)} geometry={rock} color="#639578" />
       <Instances items={mountains} geometry={rock} color="#729caa" shadow={false} />
       {houses.map((items, i) => (
         <Instances
@@ -356,9 +356,6 @@ export function CoastArt() {
       <Instances items={umbrellas} geometry={cone} color="#df957e" />
       <Instances items={umbrellaPoles} geometry={box} color="#eee1bb" />
       <Instances items={marketCounters} geometry={box} color="#eed5a6" />
-      <Instances items={people.filter((_, i) => i % 2 === 0)} geometry={box} color="#da947c" />
-      <Instances items={people.filter((_, i) => i % 2 === 1)} geometry={box} color="#5f9f9a" />
-      <Instances items={heads} geometry={rock} color="#dbb795" />
       <Instances items={poles} geometry={box} color="#e3d5b4" />
       <Instances items={flags} geometry={box} color="#e4bd73" wind />
       <Instances items={bridgePiers} geometry={box} color="#829a91" />

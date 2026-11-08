@@ -21,6 +21,30 @@ export class Race {
   previousPhase: Phase = 'RACING';
   countdown = 3;
   elapsed = 0;
+  finishElapsed = 0;
+  finishTime: number | null = null;
+  get simulationTime() {
+    return this.elapsed + this.finishElapsed;
+  }
+  get cooldownActive() {
+    return (
+      this.phase === 'FINISHING' ||
+      (this.phase === 'RESULTS' &&
+        this.finishTime !== null &&
+        (this.finishElapsed < 4 || (this.mode === 'gp' && !this.gp.completed)))
+    );
+  }
+  beginFinish(time = this.elapsed) {
+    if (this.finishTime !== null) return false;
+    this.finishTime = time;
+    this.elapsed = time;
+    this.finishElapsed = 0;
+    this.phase = 'FINISHING';
+    return true;
+  }
+  skipFinish() {
+    if (this.phase === 'FINISHING') this.phase = 'RESULTS';
+  }
   lapStart = 0;
   laps: number[] = [];
   nextGate = 1;
@@ -72,6 +96,8 @@ export class Race {
     this.lastImpact.clear();
     this.countdown = 3;
     this.elapsed = 0;
+    this.finishTime = null;
+    this.finishElapsed = 0;
     this.lapStart = 0;
     this.laps = [];
     this.nextGate = 1;
@@ -87,9 +113,17 @@ export class Race {
     if (this.phase === 'COUNTDOWN') {
       this.countdown = Math.max(0, this.countdown - dt);
       if (this.countdown === 0) this.phase = 'RACING';
-    } else if ((this.phase === 'RACING' || this.phase === 'FINISHING') && this.mode !== 'free') {
+    } else if (this.phase === 'RACING' && this.mode !== 'free') {
       this.elapsed += dt;
       if (this.elapsed >= this.hitMessageUntil) this.hitMessage = '';
+    } else if (this.cooldownActive) {
+      this.finishElapsed += dt;
+      if (
+        this.phase === 'FINISHING' &&
+        this.finishElapsed >= 4 &&
+        (this.mode !== 'gp' || this.gp.completed)
+      )
+        this.phase = 'RESULTS';
     }
   }
   pause() {
@@ -127,7 +161,7 @@ export class Race {
       this.lapStart = this.elapsed;
       this.message = this.invalid ? 'Lap discarded · try again' : 'Clean lap';
       this.invalid = false;
-      if (this.laps.length === modeDefinitions[this.mode].laps) this.phase = 'RESULTS';
+      if (this.laps.length === modeDefinitions[this.mode].laps) this.beginFinish();
     }
   }
 }

@@ -58,3 +58,9 @@ Reviewed source transfers must include public/manifest.webmanifest and public/ic
 Additional gates: npm run test:mobile, npm run test:immersive, npm run test:styles, npm run test:vehicles and npm run test:pages-manifest. Browser checks need Playwright Chromium or CHROME_PATH. Run test:pages against the actual deployed URL using APEX_TEST_URL. Test fullscreen/fallbacks and touch on the public site, then create the approved public tag on the verified deployed commit.
 
 The rollback checkpoints remain v0.5.1-public and v0.5.1-rollback-before-v061. Real Android/iOS/install acceptance remains a separate manual playtest; emulation is not physical-device certification.
+
+## v0.7.1 release additions
+
+Preserve the source-only boundary and original notices. The release includes v0.7 art, fair AI and causeway fixes. Run `npm run test:v07-ui` and `npm run test:v071` for current menu/finish integration. `npm run test:release-race` uses public HUD/minimap telemetry and keyboard events to complete production races; set APEX_TEST_URL to the Pages deployment URL and CHROME_PATH when needed. Its navigation helper is injected only into the test browser and does not change game physics or state. Set APEX_TRACKS to pine or coast for a focused run. Review actual Actions and live gameplay before the public stable tag.
+
+The v0.6.1-public and v0.6.1-rollback-before-v071 tags preserve the previous release. Roll back with a reviewed revert commit and normal verified deployment, without rewriting history.

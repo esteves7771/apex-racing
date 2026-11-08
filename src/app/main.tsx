@@ -6,6 +6,7 @@ import { Scene } from '../render/Scene';
 import { Interface } from '../ui/Interface';
 import { installKeyboard } from '../input/keyboard';
 import './style.css';
+import './premium.css';
 import { PhysicsDebugToggle } from '../ui/PhysicsDebug';
 import { audioManager } from '../audio/AudioManager';
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {

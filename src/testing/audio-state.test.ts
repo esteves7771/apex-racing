@@ -36,7 +36,7 @@ it('renders finite, unclipped, phase-aligned loop layers with quiet endpoints', 
       return { length, sampleRate, duration: length / sampleRate, getChannelData: () => data };
     },
   } as unknown as AudioContext;
-  for (const name of ['menu', 'race', 'challenge'] as const) {
+  for (const name of ['menu', 'race', 'coast', 'challenge'] as const) {
     const asset = compose(ctx, name);
     expect(asset.base.length).toBe(asset.energy.length);
     for (const layer of [asset.base, asset.energy]) {

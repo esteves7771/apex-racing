@@ -1,10 +1,11 @@
+import { continuousRail, forestTerrainTint } from './RoadArt';
+import { ForestWorld } from './WorldDetails';
 import { useMemo } from 'react';
 import { Instances } from './InstancedProps';
 import { EvolutionScenery, TrackLabel } from './EvolutionScenery';
 import * as THREE from 'three';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { GroundColliders } from './GroundColliders';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {
   samples,
   ribbon,
@@ -23,7 +24,8 @@ const road = ribbon(-6, 6, 0.035),
   shoulderLeft = shoulderGeometry(-1),
   shoulderRight = shoulderGeometry(1),
   terrain = terrainGeometry();
-const roundedBarrier = new RoundedBoxGeometry(1, 1, 1, 2, 0.1);
+const forestFloor = forestTerrainTint(terrain);
+const concreteWall = continuousRail({ samples, roadHeight }, 7.5, 0.68, 1.3, 0.65);
 export const barriers = samples
   .filter((_, i) => i % 3 === 0)
   .flatMap((s, i) =>
@@ -38,7 +40,6 @@ export const barriers = samples
     }),
   );
 const box = new THREE.BoxGeometry(1, 1, 1),
-  cone = new THREE.ConeGeometry(1, 1, 7),
   rock = new THREE.DodecahedronGeometry(1, 0);
 let seed = 98;
 function random() {
@@ -64,16 +65,6 @@ const trees = Array.from({ length: 110 }, () => {
   } while (nearestTrack(x, z).distance < 20);
   return { x, z, size: 0.8 + random() * 1.1 };
 });
-const trunks = trees.map((t) => ({
-  position: new THREE.Vector3(t.x, terrainHeight(t.x, t.z) + 1.1 * t.size, t.z),
-  scale: new THREE.Vector3(0.5 * t.size, 2.2 * t.size, 0.5 * t.size),
-}));
-const crowns = trees.flatMap((t) =>
-  [0, 1, 2].map((i) => ({
-    position: new THREE.Vector3(t.x, terrainHeight(t.x, t.z) + (2.6 + i * 1.45) * t.size, t.z),
-    scale: new THREE.Vector3((2.3 - i * 0.4) * t.size, 3.5 * t.size, (2.3 - i * 0.4) * t.size),
-  })),
-);
 const rocks = trees
   .filter((_, i) => i % 4 === 0)
   .map((t) => ({
@@ -81,7 +72,7 @@ const rocks = trees
     scale: new THREE.Vector3(1.9, 1.3, 1.5),
     rotation: t.x,
   }));
-export function TrackMesh() {
+export function TrackMesh({ preset = 'high' }: { preset?: string }) {
   const curbs = useMemo(
     () =>
       samples.flatMap((s, i) =>
@@ -105,8 +96,8 @@ export function TrackMesh() {
   const start = poseAt(0);
   return (
     <>
-      <mesh geometry={terrain} receiveShadow>
-        <meshStandardMaterial color={palette.grass} />
+      <mesh geometry={forestFloor} receiveShadow>
+        <meshStandardMaterial vertexColors roughness={1} />
       </mesh>
       <RigidBody type="fixed" colliders={false}>
         {barriers.map((b, i) => (
@@ -123,10 +114,10 @@ export function TrackMesh() {
       <GroundColliders road={road} terrain={terrain} />
       <EvolutionScenery />
       <mesh geometry={verge} receiveShadow>
-        <meshStandardMaterial color="#88cba2" />
+        <meshStandardMaterial color="#7ba776" />
       </mesh>
       <mesh geometry={vergeRight} receiveShadow>
-        <meshStandardMaterial color="#88cba2" />
+        <meshStandardMaterial color="#7ba776" />
       </mesh>
       <mesh geometry={shoulderLeft} receiveShadow>
         <meshStandardMaterial color={palette.grass} />
@@ -139,17 +130,10 @@ export function TrackMesh() {
       </mesh>
       <Instances geometry={box} color={palette.coral} items={curbs.filter((c) => c.coral)} />
       <Instances geometry={box} color={palette.cream} items={curbs.filter((c) => !c.coral)} />
-      <Instances
-        geometry={roundedBarrier}
-        color={palette.barrier}
-        items={barriers.map((b) => ({
-          position: b.p.clone().add(new THREE.Vector3(0, 0.65, 0)),
-          scale: new THREE.Vector3(0.68, 1.3, b.length),
-          rotation: b.yaw,
-        }))}
-      />
-      <Instances geometry={box} color="#765c49" items={trunks} />
-      <Instances geometry={cone} color={palette.pine} items={crowns} />
+      <mesh geometry={concreteWall} receiveShadow>
+        <meshStandardMaterial color={palette.barrier} roughness={0.85} />
+      </mesh>
+      <ForestWorld preset={preset} />
       <Instances geometry={rock} color="#96ac9b" items={rocks} />
       {Array.from({ length: 12 }, (_, i) => (
         <mesh
@@ -157,7 +141,7 @@ export function TrackMesh() {
           position={[Math.cos(i * 2.4) * 510 + 120, 6, Math.sin(i * 2.4) * 470 + 50]}
           scale={[90, 35 + (i % 3) * 13, 75]}
         >
-          <icosahedronGeometry args={[1, 0]} />
+          <icosahedronGeometry args={[1, 1]} />
           <meshStandardMaterial color={i % 2 ? '#79b69b' : '#93c8ac'} flatShading />
         </mesh>
       ))}

@@ -1,3 +1,5 @@
+import { speedFov } from './speedFeedback';
+import { menuPose } from '../render/MenuStage';
 import { useTouchDevice } from '../input/device';
 import { trackId, coast, nearestTrack } from '../track/ActiveTrack';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -31,10 +33,21 @@ export function FollowCamera() {
     const desiredPosition = desired.current,
       targetPosition = target.current;
     if (menu) {
-      const a = time.current * 0.055;
-      desiredPosition.set(12 * Math.cos(a) + 5, 8.8, 13 * Math.sin(a) + 12).add(carPosition);
-      targetPosition.copy(carPosition);
-      targetPosition.y += 0.6;
+      const pose = menuPose(),
+        sway = settings.reducedMotion ? 0 : Math.sin(time.current * 0.08) * 0.7;
+      desiredPosition
+        .copy(pose.p)
+        .add(
+          new THREE.Vector3(
+            Math.cos(pose.yaw) * 9 + Math.sin(pose.yaw) * 17,
+            8.5,
+            -Math.sin(pose.yaw) * 9 + Math.cos(pose.yaw) * 17,
+          ),
+        );
+      desiredPosition.x += sway;
+      targetPosition
+        .copy(pose.p)
+        .add(new THREE.Vector3(-Math.sin(pose.yaw) * 8, 1.3, -Math.cos(pose.yaw) * 8));
     } else {
       const eagle = telemetry.camera === 1,
         speed = settings.reducedMotion ? 0 : Math.min(1, Math.abs(telemetry.speed) / 42);
@@ -67,7 +80,7 @@ export function FollowCamera() {
       camera.fov = THREE.MathUtils.damp(
         camera.fov,
         (touch && size.width / size.height < 1.8 ? 55 : 48) +
-          (settings.reducedMotion ? 0 : Math.min(6, Math.abs(telemetry.speed) * 0.14)),
+          speedFov(telemetry.speed, settings.reducedMotion, menu, telemetry.camera),
         3,
         dt,
       );

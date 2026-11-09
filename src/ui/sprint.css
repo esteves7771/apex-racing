@@ -1,0 +1,39 @@
+.timing .sprint-progress .time-row {
+  display: flex;
+}
+.sprint-progress progress {
+  width: 100%;
+  height: 7px;
+  margin: 15px 0 5px;
+  accent-color: #62e1da;
+}
+.sprint-section {
+  display: block;
+  color: #ffe2a4;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.boost-status {
+  color: #82d7ce;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-top: 12px;
+}
+.boost-status.boosting {
+  color: #bcffff;
+  text-shadow: 0 0 10px #1bdded;
+}
+.circuit-choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.destination:nth-child(3) {
+  background: linear-gradient(145deg, #815642, #3e3830);
+}
+@media (max-width: 700px) {
+  .circuit-choices {
+    grid-template-columns: 1fr;
+  }
+  .sprint-section {
+    font-size: 11px;
+  }
+}

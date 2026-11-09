@@ -36,7 +36,7 @@ it('renders finite, unclipped, phase-aligned loop layers with quiet endpoints', 
       return { length, sampleRate, duration: length / sampleRate, getChannelData: () => data };
     },
   } as unknown as AudioContext;
-  for (const name of ['menu', 'race', 'coast', 'challenge'] as const) {
+  for (const name of ['menu', 'race', 'coast', 'canyon', 'challenge'] as const) {
     const asset = compose(ctx, name);
     expect(asset.base.length).toBe(asset.energy.length);
     for (const layer of [asset.base, asset.energy]) {
@@ -55,4 +55,16 @@ it('renders finite, unclipped, phase-aligned loop layers with quiet endpoints', 
       expect(Math.abs(data[0] - data.at(-1)!)).toBeLessThan(0.003);
     }
   }
+});
+
+it('selects the distinct canyon theme and respects ordinary completion/menu lifecycle', () => {
+  expect(themeFor('COUNTDOWN', 'time', 'canyon')).toBe('canyon');
+  expect(themeFor('RACING', 'gp', 'canyon')).toBe('canyon');
+  expect(themeFor('RESULTS', 'time', 'canyon')).toBe('results');
+  expect(themeFor('MENU', 'time', 'canyon')).toBe('menu');
+  expect(themeFor('RACING', 'time', 'coast')).toBe('coast');
+  expect(compositions.canyon.bpm).toBeGreaterThanOrEqual(125);
+  expect(compositions.canyon.bpm).toBeLessThanOrEqual(135);
+  expect(compositions.canyon.motif).not.toEqual(compositions.race.motif);
+  expect(compositions.canyon.motif).not.toEqual(compositions.coast.motif);
 });

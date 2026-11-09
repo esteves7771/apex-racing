@@ -1,3 +1,5 @@
+import { BoostState } from '../vehicle/BoostState';
+import { trackId, canyon } from '../track/ActiveTrack';
 import { useRef, useEffect, memo } from 'react';
 import {
   RigidBody,
@@ -19,6 +21,7 @@ import { bankAt } from '../track/ActiveTrack';
 const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
   const ref = useRef<RapierRigidBody>(null),
     jump = useRef(new JumpDynamics()),
+    boost = useRef(new BoostState()),
     car = getVehicle(racer.vehicle),
     spawn = useRef(gridSpawn(racer.grid)),
     last = useRef(0);
@@ -43,7 +46,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
       right = { x: Math.cos(yaw), z: -Math.sin(yaw) },
       forward = v.x * f.x + v.z * f.z,
       lateral = v.x * right.x + v.z * right.z;
-    const contact = probeGround(world, b, f, right),
+    const contact = probeGround(world, b, f, right, trackId === 'canyon' ? 'canyon' : 'default'),
       ai = racer.ai!;
     if (!['RACING', 'FINISHING', 'RESULTS'].includes(race.phase) || race.gp.completed) {
       b.setLinvel({ x: 0, y: v.y, z: 0 }, true);
@@ -53,6 +56,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
     }
     const flight = jump.current.step({
       t: ai.t ?? spawn.current.t,
+      route: (ai as unknown as { route?: string }).route,
       lateral: ai.lateral,
       speed: forward,
       grounded: contact.grounded,
@@ -69,6 +73,16 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
       state.current.landingSerial++;
       state.current.landingStrength = flight.landing;
     }
+    const near =
+      trackId === 'canyon' ? canyon.projectRoute(p.x, p.z, ai.t, racer.progress.route) : null;
+    if (near)
+      boost.current.step(
+        near.t,
+        near.lateral,
+        near.route,
+        flight.grounded,
+        race.phase === 'RACING',
+      );
     const command = ai.update(
       {
         x: p.x,
@@ -79,6 +93,7 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
         lateralSpeed: lateral,
         grounded: flight.grounded,
         finished: racer.progress.finishTime !== null,
+        ...(trackId === 'canyon' ? { boostRemaining: boost.current.remaining } : {}),
       },
       race.gp.traffic(),
     );
@@ -98,6 +113,8 @@ const Opponent = memo(function Opponent({ racer }: { racer: CupRacer }) {
       f,
       right,
       v.y,
+      1 / 60,
+      boost.current.factor,
     );
     Object.assign(state.current, {
       speed: forward,

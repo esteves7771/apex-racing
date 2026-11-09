@@ -1,6 +1,15 @@
+import { branches as canyonBranches, routePose } from '../track/CanyonCarnival';
+import { courseModeLabel, driveLabel } from './coursePresentation';
 import { useModalFocus } from './useModalFocus';
 import { useState } from 'react';
-import { tracks, trackId, TRACK_INFO, TRACK_LENGTH, type TrackId } from '../track/ActiveTrack';
+import {
+  tracks,
+  trackId,
+  activeTrack,
+  TRACK_INFO,
+  TRACK_LENGTH,
+  type TrackId,
+} from '../track/ActiveTrack';
 import { useGame } from '../game/store';
 import { modeDefinitions } from '../game/Modes';
 import { formatTime, type Mode } from '../game/RaceStateMachine';
@@ -47,13 +56,34 @@ export function TrackOutline({ id }: { id: TrackId }) {
       role="img"
       aria-label={`${tracks[id].TRACK_INFO.name} track outline`}
     >
+      {id === 'canyon' &&
+        canyonBranches.map((b) => (
+          <polyline
+            key={b.id}
+            points={Array.from({ length: 25 }, (_, i) => {
+              const p = routePose(b.start + ((b.end - b.start) * i) / 24, b.id).p;
+              return `${15 + (p.x - minX) * scale},${15 + (p.z - minZ) * scale}`;
+            }).join(' ')}
+            fill="none"
+            stroke="#65dacf"
+            strokeWidth="1.5"
+          />
+        ))}
       <polyline
-        points={[...points, points[0]].join(' ')}
+        points={(tracks[id].format === 'sprint' ? points : [...points, points[0]]).join(' ')}
         fill="none"
         stroke="currentColor"
         strokeWidth="3"
         strokeLinejoin="round"
       />
+      {tracks[id].format === 'sprint' && (
+        <circle
+          cx={15 + (samples.at(-1)!.p.x - minX) * scale}
+          cy={15 + (samples.at(-1)!.p.z - minZ) * scale}
+          r="5"
+          fill="#66e7dc"
+        />
+      )}
       <circle
         cx={15 + (samples[0].p.x - minX) * scale}
         cy={15 + (samples[0].p.z - minZ) * scale}
@@ -84,6 +114,7 @@ export function PremiumMenu({
     car = getVehicle(save.settings.vehicle),
     [circuits, setCircuits] = useState(false);
   useModalFocus(circuits, () => setCircuits(false));
+  const sprint = activeTrack.format === 'sprint';
   const gp = mode === 'gp',
     recordMode = mode === 'challenge' ? 'challenge' : 'time';
   const record = save.records[recordKey(recordMode, car.id)];
@@ -143,7 +174,7 @@ export function PremiumMenu({
             <MenuIcon name="settings" /> Settings
           </button>
         </nav>
-        <small className="club-version">LOCAL EDITION · 0.7.1</small>
+        <small className="club-version">LOCAL EDITION · 0.8.0</small>
       </header>
       <main className="club-hero">
         <div className="eyebrow">THREE PERSONALITIES. YOUR RACING LINE.</div>
@@ -155,20 +186,24 @@ export function PremiumMenu({
         <p>
           {trackId === 'pine'
             ? 'Sunlit forest. Sweeping corners. Your next perfect lap.'
-            : 'Ocean causeways. Hidden caverns. A turquoise horizon.'}
+            : trackId === 'coast'
+              ? 'Ocean causeways. Hidden caverns. A turquoise horizon.'
+              : 'Seven worlds. Four choices. One canyon adventure.'}
           <br />
           Make every corner count.
         </p>
         <button className="primary club-start" onClick={() => act(() => configure(gp))}>
-          {trackId === 'pine' ? 'Drive Pine Valley' : 'Drive Coral Coast'} <span>→</span>
+          {driveLabel(trackId)} <span>→</span>
         </button>
         <small className="race-summary">
-          {modeDefinitions[mode].label} ·{' '}
+          {courseModeLabel(mode, sprint)} ·{' '}
           {gp
             ? difficulties[save.settings.difficulty].label
             : mode === 'free'
               ? 'Explore at your pace'
-              : `${modeDefinitions[mode].laps} ${modeDefinitions[mode].laps === 1 ? 'lap' : 'laps'}`}{' '}
+              : sprint
+                ? 'Point-to-point sprint'
+                : `${modeDefinitions[mode].laps} ${modeDefinitions[mode].laps === 1 ? 'lap' : 'laps'}`}{' '}
           · Configure & start
         </small>
       </main>
@@ -202,13 +237,19 @@ export function PremiumMenu({
           </span>
           <span>
             <small>ENVIRONMENT</small>
-            {trackId === 'pine' ? 'Alpine forest' : 'Coastal / Lagoon'}
+            {trackId === 'pine'
+              ? 'Alpine forest'
+              : trackId === 'coast'
+                ? 'Coastal / Lagoon'
+                : 'Canyon / Festival'}
           </span>
         </div>
         <p>
           {trackId === 'pine'
             ? 'Banked sweepers, wooded hills and the optional Pine Leap.'
-            : 'Six island districts, two tunnels and Lagoon Leap with a level bypass.'}
+            : trackId === 'coast'
+              ? 'Six island districts, two tunnels and Lagoon Leap with a level bypass.'
+              : 'Seven desert districts, route choices, boost pads and Eagle’s Leap.'}
         </p>
         <button className="club-text" onClick={() => setCircuits(true)}>
           Explore circuits <span>↗</span>
@@ -248,21 +289,27 @@ export function PremiumMenu({
           >
             {Object.entries(modeDefinitions).map(([id, m]) => (
               <option key={id} value={id} disabled={id === 'challenge' && trackId !== 'pine'}>
-                {m.label}
+                {courseModeLabel(id as Mode, sprint)}
               </option>
             ))}
           </select>
           <p>
             {mode === 'free'
-              ? 'Explore the circuit. Find your flow.'
+              ? sprint
+                ? 'Explore all seven districts at your pace.'
+                : 'Explore the circuit. Find your flow.'
               : mode === 'gp'
-                ? 'Three rivals. Three laps. One podium.'
+                ? sprint
+                  ? 'Three rivals. One sprint. One podium.'
+                  : 'Three rivals. Three laps. One podium.'
                 : mode === 'challenge'
                   ? 'A one-lap slalom. Every impact counts.'
-                  : 'Three clean laps. Chase your personal best.'}
+                  : sprint
+                    ? 'One clean sprint. Master every route choice.'
+                    : 'Three clean laps. Chase your personal best.'}
           </p>
           <small>
-            {trackId === 'coast'
+            {trackId !== 'pine'
               ? 'Obstacle Challenge available on Pine Valley'
               : 'All four game modes available'}
           </small>
@@ -293,7 +340,7 @@ export function PremiumMenu({
         </div>
         <div className="club-panel best-card">
           <span className="eyebrow">
-            {gp ? 'GRAND PRIX BEST' : `${modeDefinitions[recordMode].label.toUpperCase()} BEST`}
+            {gp ? 'GRAND PRIX BEST' : `${courseModeLabel(recordMode, sprint).toUpperCase()} BEST`}
           </span>
           <strong>
             {gp
@@ -309,10 +356,14 @@ export function PremiumMenu({
           </p>
           <small>
             {gp
-              ? '3-lap cup · selected AI difficulty'
+              ? sprint
+                ? 'Sprint · selected AI difficulty'
+                : '3-lap cup · selected AI difficulty'
               : recordMode === 'challenge'
                 ? '1 lap + penalties · local record'
-                : '3 clean laps · local record'}
+                : sprint
+                  ? '1 clean sprint · local record'
+                  : '3 clean laps · local record'}
           </small>
         </div>
         <div className="club-panel quick-card">
@@ -362,7 +413,7 @@ export function PremiumMenu({
         <b>
           APEX<span> /</span>
         </b>
-        <span>PINE VALLEY　 /　 CORAL COAST　 /　 EVOLUTION</span>
+        <span>PINE VALLEY　 /　 CORAL COAST　 /　 CANYON CARNIVAL</span>
         <small>
           <kbd>Tab</kbd> Navigate　 <kbd>Enter</kbd> Select
         </small>
@@ -376,7 +427,7 @@ export function PremiumMenu({
             aria-label="Circuit selection"
           >
             <div className="eyebrow">APEX / DESTINATIONS</div>
-            <h2>Two worlds. Your line.</h2>
+            <h2>Three worlds. Your line.</h2>
             <div className="circuit-choices">
               {Object.entries(tracks).map(([id, t]) => (
                 <button
@@ -403,14 +454,19 @@ export function PremiumMenu({
                   <small>
                     {id === 'pine'
                       ? 'Forest · banked sweep · Pine Leap'
-                      : 'Coast · Crystal Caverns · Lagoon Leap'}
+                      : id === 'coast'
+                        ? 'Coast · Crystal Caverns · Lagoon Leap'
+                        : 'Sprint · seven districts · four route choices'}
                   </small>
                   <strong>
                     {formatTime(
                       save.records[recordKey('time', car.id, t.TRACK_LAYOUT_ID)]?.bestTotal ?? null,
                     )}
                   </strong>
-                  <small>Time Attack · {car.name.split(' ')[1]} · 3 laps</small>
+                  <small>
+                    {courseModeLabel('time', t.format === 'sprint')} · {car.name.split(' ')[1]} ·{' '}
+                    {t.format === 'sprint' ? 'point-to-point' : '3 laps'}
+                  </small>
                 </button>
               ))}
             </div>

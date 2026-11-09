@@ -9,6 +9,8 @@ import {
   type RapierRigidBody,
 } from '@react-three/rapier';
 import * as THREE from 'three';
+import { BoostState } from './BoostState';
+import { canyon, activeTrack } from '../track/ActiveTrack';
 import { finishCommand } from '../game/FinishDrive';
 import { CarVisual } from './CarVisual';
 import { applyVehicleCommand } from './VehicleDynamics';
@@ -51,6 +53,9 @@ export function ArcadeVehicleController() {
     beforeSolver = useRef({ x: 0, y: 0, z: 0 }),
     forwardAxis = useRef({ x: 0, y: 0, z: -1 }),
     jump = useRef(new JumpDynamics()),
+    boost = useRef(new BoostState()),
+    physicalProgress = useRef(0),
+    earnedRoute = useRef('main'),
     lastForward = useRef(0),
     lastVertical = useRef(0),
     { world, rapier } = useRapier();
@@ -110,13 +115,24 @@ export function ArcadeVehicleController() {
       serial.current = telemetry.resetSerial;
       if (!initial) {
         if (race.mode === 'gp') race.gp.resetRacer('player');
-        else race.invalidate('Reset · lap invalid');
+        else
+          race.invalidate(
+            activeTrack.format === 'sprint' ? 'Reset · sprint invalid' : 'Reset · lap invalid',
+          );
       }
       if (race.mode === 'gp' && race.gp.player) {
         race.gp.player.body = b;
         race.gp.player.progress.resetPosition(b.translation(), race.gp.player.progress.t);
       }
       jump.current.reset();
+      boost.current.reset();
+      const resetNear =
+        trackId === 'canyon' ? canyon.nearestTrack(b.translation().x, b.translation().z) : null;
+      physicalProgress.current = resetNear?.t ?? t;
+      earnedRoute.current = resetNear?.route ?? 'main';
+      telemetry.courseRoute = earnedRoute.current;
+      telemetry.boostRemaining = 0;
+      telemetry.courseProgress = Math.max(0, t);
       telemetry.airborne = false;
       telemetry.landingStrength = 0;
       lastForward.current = 0;
@@ -134,12 +150,19 @@ export function ArcadeVehicleController() {
       right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const forward = v.x * f.x + v.z * f.z,
       lateral = v.x * right.x + v.z * right.z;
-    const near = nearestTrack(p.x, p.z);
+    const near =
+      trackId === 'canyon'
+        ? canyon.projectProgress(p.x, p.z, physicalProgress.current, earnedRoute.current)
+        : nearestTrack(p.x, p.z);
     telemetry.velocityX = v.x;
     telemetry.velocityZ = v.z;
-    telemetry.offroad = near.distance > 6.8;
+    telemetry.offroad =
+      near.distance >
+      (trackId === 'canyon'
+        ? canyon.roadWidthAt(near.t, (near as { route?: string }).route) / 2 - 0.3
+        : 6.8);
     telemetry.yaw = yaw;
-    const probe = probeGround(world, b, f, right),
+    const probe = probeGround(world, b, f, right, trackId === 'canyon' ? 'canyon' : 'default'),
       contact = probe.grounded;
     telemetry.grounded = contact;
     const cooling = race.cooldownActive;
@@ -157,6 +180,7 @@ export function ArcadeVehicleController() {
     }
     const flight = jump.current.step({
       t: near.t,
+      route: (near as { route?: string }).route,
       lateral: near.lateral,
       speed: forward,
       grounded: contact,
@@ -164,13 +188,14 @@ export function ArcadeVehicleController() {
       forward: f.dot(curve.getTangentAt(near.t)) > 0.5,
       dt: 1 / 60,
     });
-    if (trackId === 'coast' && flight.takeoff && forward > 8) telemetry.jumpCount++;
+    if ((trackId === 'coast' || trackId === 'canyon') && flight.takeoff && forward > 8)
+      telemetry.jumpCount++;
     telemetry.grounded = flight.grounded;
     telemetry.airborne = flight.airborne;
     if (flight.launch !== undefined) {
       v.y = Math.max(v.y, flight.launch);
       b.setLinvel(v, true);
-      telemetry.jumpCount++;
+      if (trackId !== 'canyon') telemetry.jumpCount++;
     }
     if (flight.landing) {
       telemetry.landingSerial++;
@@ -185,6 +210,18 @@ export function ArcadeVehicleController() {
     telemetry.groundPitch = Math.atan(
       -(probe.normal.x * f.x + probe.normal.z * f.z) / probe.normal.y,
     );
+    if (trackId === 'canyon') {
+      boost.current.step(
+        near.t,
+        near.lateral,
+        (near as unknown as { route: string }).route,
+        telemetry.grounded,
+        race.phase === 'RACING',
+      );
+      telemetry.boostRemaining = boost.current.remaining;
+      telemetry.boostSerial = boost.current.serial;
+      telemetry.boostExpiredSerial = boost.current.expiredSerial;
+    }
     const input = cooling
         ? finishCommand(p.x, p.z, yaw, forward, race.finishElapsed)
         : drivingInput(),
@@ -200,6 +237,8 @@ export function ArcadeVehicleController() {
         f,
         right,
         v.y,
+        1 / 60,
+        boost.current.factor,
       );
     if (import.meta.env.DEV && usePhysicsDebug.getState().enabled) {
       beforeSolver.current = { ...b.linvel() };
@@ -224,7 +263,17 @@ export function ArcadeVehicleController() {
     telemetry.drift = next.drift;
     telemetry.braking = input.brake && forward > 0.5;
     if (race.phase === 'RACING') {
-      if (near.distance > 9) race.invalidate('Off track · lap invalid');
+      if (
+        near.distance >
+        (trackId === 'canyon'
+          ? canyon.roadWidthAt(near.t, (near as { route?: string }).route) / 2 + 1
+          : 9)
+      )
+        race.invalidate(
+          activeTrack.format === 'sprint'
+            ? 'Off track · sprint invalid'
+            : 'Off track · lap invalid',
+        );
       if (p.y < -4) telemetry.resetSerial++;
     }
   });
@@ -248,13 +297,29 @@ export function ArcadeVehicleController() {
       race.nextGate = progress.nextGate;
       race.safeGate = progress.safeGate;
       race.invalid = progress.invalid;
-      race.message = progress.invalid ? 'Lap invalid · pass every gate in order' : '';
+      race.message = progress.invalid
+        ? activeTrack.format === 'sprint'
+          ? 'Sprint invalid · pass every milestone in order'
+          : 'Lap invalid · pass every gate in order'
+        : '';
       race.lapStart = progress.lapStart;
       if (progress.finishTime !== null && race.beginFinish(progress.finishTime)) saveRecords();
     } else if (race.phase === 'RACING') {
       for (let i = 0; i < checkpoints.length; i++)
         if (crossedGate(previous.current, current, i)) race.gate(i);
       if ((race.phase as string) === 'FINISHING') saveRecords();
+    }
+    if (activeTrack.format === 'sprint') {
+      const n = canyon.projectProgress(p.x, p.z, physicalProgress.current, earnedRoute.current);
+      const lower = checkpoints[Math.min(race.safeGate, checkpoints.length - 1)].t,
+        upper = checkpoints[Math.min(race.nextGate, checkpoints.length - 1)].t;
+      earnedRoute.current = n.route;
+      telemetry.courseRoute = n.route;
+      physicalProgress.current = n.t;
+      telemetry.courseProgress = Math.max(
+        0,
+        Math.min(1, race.mode === 'free' ? n.t : Math.max(lower, Math.min(upper, n.t))),
+      );
     }
     previous.current.copy(current);
     telemetry.x = p.x;

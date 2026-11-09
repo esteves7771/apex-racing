@@ -1,17 +1,20 @@
-import { trackFeatures, trackId } from '../track/ActiveTrack';
+import { canyon, trackFeatures, trackId } from '../track/ActiveTrack';
 export class JumpDynamics {
   armed = true;
   airTime = 0;
   hold = 0;
   airborne = false;
+  private canyonArmed = new Set<string>();
   reset() {
     this.armed = true;
+    this.canyonArmed.clear();
     this.airTime = 0;
     this.hold = 0;
     this.airborne = false;
   }
   step(input: {
     t: number;
+    route?: string;
     lateral: number;
     speed: number;
     grounded: boolean;
@@ -38,6 +41,24 @@ export class JumpDynamics {
       this.armed = false;
       this.hold = 0.16;
     }
+    if (trackId === 'canyon')
+      for (const ramp of canyon.jumps) {
+        if (Math.abs(input.t - ramp.t) > 0.008) this.canyonArmed.delete(ramp.id);
+        if (
+          !this.canyonArmed.has(ramp.id) &&
+          input.grounded &&
+          input.forward &&
+          input.speed >= ramp.minSpeed &&
+          input.route === ramp.route &&
+          input.t >= ramp.t - 0.0003 &&
+          input.t <= ramp.t + 0.0008 &&
+          Math.abs(input.lateral - ramp.lateral) < 1.2
+        ) {
+          launch = ramp.velocity;
+          this.hold = 0.14;
+          this.canyonArmed.add(ramp.id);
+        }
+      }
     const grounded = input.grounded && this.hold === 0;
     if (!grounded) {
       this.airTime += input.dt;

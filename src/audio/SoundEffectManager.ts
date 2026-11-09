@@ -14,7 +14,9 @@ export type Sound =
   | 'positionDown'
   | 'pass'
   | 'carImpact'
-  | 'podium';
+  | 'podium'
+  | 'boost'
+  | 'boostEnd';
 export class SoundEffectManager {
   voices = new Set<OscillatorNode>();
   last = new Map<string, number>();
@@ -43,10 +45,12 @@ export class SoundEffectManager {
       pass: 240,
       carImpact: 92,
       podium: 1046,
+      boost: 330,
+      boostEnd: 740,
     };
     const duration = ['finish', 'best', 'podium'].includes(sound)
       ? 0.65
-      : ['crate', 'landing'].includes(sound)
+      : ['crate', 'landing', 'boost'].includes(sound)
         ? 0.22
         : 0.11;
     const osc = this.ctx.createOscillator(),
@@ -54,7 +58,8 @@ export class SoundEffectManager {
     osc.type = ['crate', 'barrel'].includes(sound) ? 'sawtooth' : 'triangle';
     osc.frequency.setValueAtTime(pitches[sound], now);
     osc.frequency.exponentialRampToValueAtTime(
-      pitches[sound] * (sound === 'best' ? 1.5 : 0.65),
+      pitches[sound] *
+        (sound === 'boost' ? 3.4 : sound === 'boostEnd' ? 0.42 : sound === 'best' ? 1.5 : 0.65),
       now + duration,
     );
     gain.gain.setValueAtTime(0.13 * Math.min(1, Math.max(0.15, strength)), now);

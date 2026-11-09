@@ -53,6 +53,18 @@ export function DrivingEffects({ density = 'full' }: { density?: 'full' | 'low' 
     if (!mesh.current) return;
     if (race.phase === 'PAUSED') return;
     timer.current += dt;
+    if (
+      race.phase === 'RACING' &&
+      telemetry.boostRemaining > 0 &&
+      timer.current > 0.04 &&
+      !useGame.getState().save.settings.reducedMotion
+    ) {
+      emit(2);
+      timer.current = 0;
+    }
+    (mesh.current.material as THREE.MeshBasicMaterial).color.set(
+      telemetry.boostRemaining > 0 ? '#65ebf1' : '#e3ddc0',
+    );
     if (race.phase === 'RACING' && telemetry.drift && telemetry.grounded && timer.current > 0.05) {
       emit(2);
       timer.current = 0;

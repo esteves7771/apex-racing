@@ -13,6 +13,11 @@ import { getVehicle } from '../vehicle/VehicleRegistry';
 export const race = new Race();
 export const createVehicleTelemetry = () => ({
   speed: 0,
+  courseProgress: 0,
+  courseRoute: 'main',
+  boostRemaining: 0,
+  boostSerial: 0,
+  boostExpiredSerial: 0,
   velocityX: 0,
   velocityZ: 0,
   steering: 0,

@@ -1,3 +1,5 @@
+import { CanyonProps } from '../track/CanyonProps';
+import { CanyonWorld } from '../track/CanyonWorld';
 import { WorldLife } from './WorldLife';
 import { Atmosphere } from './Atmosphere';
 import { MenuStage, menuPose } from './MenuStage';
@@ -43,9 +45,11 @@ function Sun({ size }: { size: number }) {
   }, [size]);
   useFrame(() => {
     if (ref.current) {
-      const center = ['MENU','MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition;
-      ref.current.position.copy(center).add(new THREE.Vector3(35,55,25));
-      ref.current.target.position.copy(['MENU','MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition);
+      const center = ['MENU', 'MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition;
+      ref.current.position.copy(center).add(new THREE.Vector3(35, 55, 25));
+      ref.current.target.position.copy(
+        ['MENU', 'MODE_SELECT'].includes(race.phase) ? menuPose().p : carPosition,
+      );
       ref.current.target.updateMatrixWorld();
     }
   }, FRAME_ORDER.lighting);
@@ -137,11 +141,11 @@ export function Scene({ onReady }: { onReady: () => void }) {
       }
     >
       <color attach="background" args={[trackId === 'pine' ? '#b7dace' : '#b6e4e0']} />
-      <fog attach="fog" args={[trackId==='pine'?'#b8cfc0':'#a6d4cf', 220, 1100]} />
+      <fog attach="fog" args={[trackId === 'pine' ? '#b8cfc0' : '#a6d4cf', 220, 1100]} />
       <hemisphereLight args={['#e2eddd', '#506f58', 1.6]} />
       <Sun size={graphics.shadowSize} />
-      <Atmosphere track={selectedTrack} />
-      <WorldLife track={selectedTrack} />
+      {selectedTrack !== 'canyon' && <Atmosphere track={selectedTrack} />}
+      {selectedTrack !== 'canyon' && <WorldLife track={selectedTrack} />}
       <GraphicsMonitor enabled={quality === 'auto'} lower={() => setAuto((p) => lowerPreset(p))} />
       <Suspense fallback={null}>
         <Physics
@@ -153,10 +157,17 @@ export function Scene({ onReady }: { onReady: () => void }) {
           updatePriority={FRAME_ORDER.physics}
         >
           <Ready onReady={onReady} />
-          {trackId === 'pine' ? <TrackMesh preset={preset} /> : <CoastWorld qualityKey={preset} />}
+          {trackId === 'pine' ? (
+            <TrackMesh preset={preset} />
+          ) : trackId === 'coast' ? (
+            <CoastWorld qualityKey={preset} />
+          ) : (
+            <CanyonWorld qualityKey={preset} />
+          )}
           <ArcadeVehicleController />
           <AIOpponents />
           {trackId === 'pine' && <Obstacles />}
+          {trackId === 'canyon' && <CanyonProps />}
           {debug && <PhysicsCenterOfMass />}
         </Physics>
         <Skids key={`skids-${selectedTrack}`} />

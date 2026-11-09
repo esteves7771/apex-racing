@@ -64,3 +64,9 @@ The rollback checkpoints remain v0.5.1-public and v0.5.1-rollback-before-v061. R
 Preserve the source-only boundary and original notices. The release includes v0.7 art, fair AI and causeway fixes. Run `npm run test:v07-ui` and `npm run test:v071` for current menu/finish integration. `npm run test:release-race` uses public HUD/minimap telemetry and keyboard events to complete production races; set APEX_TEST_URL to the Pages deployment URL and CHROME_PATH when needed. Its navigation helper is injected only into the test browser and does not change game physics or state. Set APEX_TRACKS to pine or coast for a focused run. Review actual Actions and live gameplay before the public stable tag.
 
 The v0.6.1-public and v0.6.1-rollback-before-v071 tags preserve the previous release. Roll back with a reviewed revert commit and normal verified deployment, without rewriting history.
+
+## v0.8 Canyon Carnival
+
+Preserve v0.7.1-public and v0.7.1-rollback-before-v08. Export only reviewed source/assets; never import private history or development records. Keep the Pages base, existing notices and generic author identity. Canyon adds sprint-specific records and physical route progression; do not compare sprint records to three-lap circuit totals.
+
+Run the existing mandatory gates plus `npm run test:canyon-presentation`, `npm run test:canyon-obstacles` when changing Canyon presentation/collisions. For actual production sprint validation use `APEX_TRACKS=canyon` with `npm run test:release-race`; the isolated driver reads public HUD/minimap and uses ordinary keyboard events, without changing game state/physics. Long physical AI diagnostics are opt-in via APEX_CANYON_AI; reuse saved evidence unless driving/geometry changes. Test actual deployed Canyon and existing circuits before creating v0.8-public. Physical-device/listening/human difficulty acceptance remains separate from automated completion.

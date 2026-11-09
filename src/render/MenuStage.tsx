@@ -1,7 +1,11 @@
 import { useGame, race } from '../game/store';
 import { tracks, trackId } from '../track/ActiveTrack';
 import { CarVisual } from '../vehicle/CarVisual';
-const stages = { pine: tracks.pine.poseAt(0.185), coast: tracks.coast.poseAt(0.115) };
+const stages = {
+  pine: tracks.pine.poseAt(0.185),
+  coast: tracks.coast.poseAt(0.115),
+  canyon: tracks.canyon.poseAt(0.025),
+};
 export const menuPose = () => stages[trackId];
 export function MenuStage() {
   const menu = useGame(() => ['MENU', 'MODE_SELECT'].includes(race.phase));

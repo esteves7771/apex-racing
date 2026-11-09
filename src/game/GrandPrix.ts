@@ -5,9 +5,12 @@ import {
   crossedGate,
   TRACK_LENGTH,
   activeTrack,
+  trackId,
+  canyon,
   surfaceAt,
   poseAt,
 } from '../track/ActiveTrack';
+import { CanyonAI } from '../ai/CanyonAI';
 import { vehicleSpawn } from '../vehicle/physicsGeometry';
 import { RacingAI, rivals, type Difficulty, type Traffic } from '../ai/RacingAI';
 import { navAt, projectTrack, clamp } from '../ai/TrackNavigation';
@@ -22,6 +25,7 @@ export class RacerProgress {
   dnf = false;
   lapStart = 0;
   t = 0.99;
+  route = 'main';
   lateral = 0;
   score = -10;
   started = false;
@@ -39,14 +43,33 @@ export class RacerProgress {
       const near = projectTrack(p.x, p.z);
       this.resetPosition(p, near.t);
     }
-    const projection = projectTrack(p.x, p.z, this.t);
+    const projection =
+      activeTrack.format === 'sprint'
+        ? canyon.projectProgress(p.x, p.z, this.t, this.route)
+        : projectTrack(p.x, p.z, this.t);
     this.t = projection.t;
+    if (activeTrack.format === 'sprint')
+      this.route = (projection as unknown as { route: string }).route;
     this.lateral = projection.lateral;
     const current = new THREE.Vector3(p.x, p.y, p.z);
-    if (projection.distance > 9) this.invalid = true;
+    if (
+      projection.distance >
+      (activeTrack.format === 'sprint' ? canyon.roadWidthAt(projection.t, this.route) / 2 + 1 : 9)
+    )
+      this.invalid = true;
     for (let i = 0; i < checkpoints.length; i++)
       if (crossedGate(this.previous, current, i)) this.gate(i, elapsed);
     this.previous.copy(current);
+    if (activeTrack.format === 'sprint') {
+      // Earned milestones bound standings; branches share canonical progress, never straight-line distance.
+      this.score =
+        clamp(
+          this.t,
+          checkpoints[this.safeGate].t,
+          checkpoints[Math.min(this.nextGate, checkpoints.length - 1)].t,
+        ) * TRACK_LENGTH;
+      return;
+    }
     let t = this.t;
     if (!this.started && this.safeGate === 0 && t > 0.8) t -= 1;
     const start = checkpoints[this.safeGate].t,
@@ -56,7 +79,7 @@ export class RacerProgress {
   }
   gate(index: number, elapsed: number) {
     if (this.finishTime !== null || this.dnf) return;
-    if (index === 0 && !this.started && this.nextGate === 1) {
+    if (activeTrack.format === 'circuit' && index === 0 && !this.started && this.nextGate === 1) {
       this.started = true;
       return;
     }
@@ -65,7 +88,17 @@ export class RacerProgress {
       return;
     }
     this.safeGate = index;
-    this.nextGate = (index + 1) % checkpoints.length;
+    this.nextGate =
+      activeTrack.format === 'sprint'
+        ? Math.min(index + 1, checkpoints.length)
+        : (index + 1) % checkpoints.length;
+    if (activeTrack.format === 'sprint') {
+      if (index === checkpoints.length - 1 && !this.invalid) {
+        this.laps = [elapsed];
+        this.finishTime = elapsed;
+      }
+      return;
+    }
     if (index === 0) {
       if (!this.invalid) this.laps.push(elapsed - this.lapStart);
       this.lapStart = elapsed;
@@ -93,7 +126,7 @@ export function gridSpawn(slot: number) {
   const t = -activeTrack.gridDistances[slot < 2 ? 0 : 1] / TRACK_LENGTH,
     lane = slot % 2 ? 2.15 : -2.15,
     spawn = vehicleSpawn(t, lane);
-  return { ...spawn, t: (t + 1) % 1, lane };
+  return { ...spawn, t: activeTrack.format === 'sprint' ? t : (t + 1) % 1, lane };
 }
 export class GrandPrixDirector {
   pendingImpact = 0;
@@ -135,7 +168,12 @@ export class GrandPrixDirector {
         color: r.color,
         grid: [1, 0, 2][i],
         progress: new RacerProgress(r.id),
-        ai: new RacingAI(getVehicle(r.vehicle), r, difficulty, 104 + i * 991),
+        ai: new (trackId === 'canyon' ? CanyonAI : RacingAI)(
+          getVehicle(r.vehicle),
+          r,
+          difficulty,
+          104 + i * 991,
+        ),
         speed: 0,
         yaw: 0,
         x: 0,
@@ -180,6 +218,7 @@ export class GrandPrixDirector {
       x: r.x,
       z: r.z,
       finished: r.progress.finishTime !== null,
+      route: activeTrack.format === 'sprint' ? r.progress.route : undefined,
     }));
   }
   update(elapsed: number) {
@@ -231,8 +270,8 @@ export class GrandPrixDirector {
       r.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       r.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
       r.progress.invalid = true;
-      r.progress.resetPosition(spawn.p, (t + 1) % 1);
-      r.ai?.reset((t + 1) % 1);
+      r.progress.resetPosition(spawn.p, activeTrack.format === 'sprint' ? t : (t + 1) % 1);
+      r.ai?.reset(activeTrack.format === 'sprint' ? t : (t + 1) % 1);
       if (r.ai) {
         r.ai.cooldown = 10;
         r.ai.resets++;

@@ -1,4 +1,4 @@
-import { checkpoints } from '../track/ActiveTrack';
+import { activeTrack, checkpoints } from '../track/ActiveTrack';
 export type Phase =
   | 'MENU'
   | 'MODE_SELECT'
@@ -146,7 +146,10 @@ export class Race {
     if (this.mode === 'free') {
       if (index === this.nextGate) {
         this.safeGate = index;
-        this.nextGate = (index + 1) % checkpoints.length;
+        this.nextGate =
+          activeTrack.format === 'sprint'
+            ? Math.min(index + 1, checkpoints.length)
+            : (index + 1) % checkpoints.length;
       }
       return;
     }
@@ -155,7 +158,19 @@ export class Race {
       return;
     }
     this.safeGate = index;
-    this.nextGate = (index + 1) % checkpoints.length;
+    this.nextGate =
+      activeTrack.format === 'sprint'
+        ? Math.min(index + 1, checkpoints.length)
+        : (index + 1) % checkpoints.length;
+    if (activeTrack.format === 'sprint') {
+      if (index === checkpoints.length - 1) {
+        if (!this.invalid) {
+          this.laps = [this.elapsed];
+          this.beginFinish();
+        } else this.message = 'Sprint invalid · retry for an official time';
+      }
+      return;
+    }
     if (index === 0) {
       if (!this.invalid) this.laps.push(this.elapsed - this.lapStart);
       this.lapStart = this.elapsed;

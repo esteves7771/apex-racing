@@ -1,7 +1,7 @@
 import { speedFov } from './speedFeedback';
 import { menuPose } from '../render/MenuStage';
 import { useTouchDevice } from '../input/device';
-import { trackId, coast, nearestTrack } from '../track/ActiveTrack';
+import { trackId, coast, canyon, nearestTrack } from '../track/ActiveTrack';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
@@ -56,14 +56,24 @@ export function FollowCamera() {
       targetPosition.copy(carPosition).addScaledVector(carForward, eagle ? 6 : 7 + speed * 4);
       targetPosition.y += 0.5;
     }
-    if (trackId === 'coast') {
-      const n = nearestTrack(carPosition.x, carPosition.z),
-        tunnel = coast.tunnelAt(n.t, 0.005);
+    if (trackId === 'coast' || trackId === 'canyon') {
+      const n =
+          trackId === 'canyon'
+            ? canyon.projectRoute(carPosition.x, carPosition.z, undefined, telemetry.courseRoute)
+            : nearestTrack(carPosition.x, carPosition.z),
+        tunnel =
+          trackId === 'canyon'
+            ? canyon.tunnelAt(n.t, (n as unknown as { route: string }).route)
+            : coast.tunnelAt(n.t, 0.005);
       if (tunnel && !menu) {
         desiredPosition.copy(carPosition).addScaledVector(carForward, -5);
         desiredPosition.y = Math.min(
           carPosition.y + 2.6,
-          coast.roadHeight(n.t) + tunnel.height - 1.4,
+          (trackId === 'canyon'
+            ? canyon.routePose(n.t, (n as unknown as { route: string }).route).p.y
+            : coast.roadHeight(n.t)) +
+            tunnel.height -
+            1.4,
         );
         targetPosition.copy(carPosition).addScaledVector(carForward, 12);
         targetPosition.y += 0.65;

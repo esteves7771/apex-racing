@@ -72,6 +72,7 @@ export const rivals = [
 ];
 export type Rival = (typeof rivals)[number];
 export interface Traffic {
+  route?: string;
   id: string;
   t: number;
   lateral: number;

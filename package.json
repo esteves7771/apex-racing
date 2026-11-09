@@ -1,6 +1,6 @@
 {
   "name": "apex-racing",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,7 +22,9 @@
     "test:v07-ui": "node scripts/v07-ui.mjs",
     "test:v071": "node scripts/v071-integration.mjs",
     "test:release-race": "node scripts/release-race.mjs",
-    "audio:previews": "node scripts/export-soundtrack.mjs"
+    "audio:previews": "node scripts/export-soundtrack.mjs",
+    "test:canyon-presentation": "node scripts/canyon-presentation.mjs",
+    "test:canyon-obstacles": "node scripts/canyon-obstacles.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.4.0",

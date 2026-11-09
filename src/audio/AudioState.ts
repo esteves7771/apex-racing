@@ -1,11 +1,15 @@
-export type Theme = 'menu' | 'race' | 'challenge' | 'results' | 'coast';
-export function themeFor(phase: string, mode: string): Theme {
+export type Theme = 'menu' | 'race' | 'challenge' | 'results' | 'coast' | 'canyon';
+export function themeFor(phase: string, mode: string, track = 'pine'): Theme {
   return phase === 'RESULTS'
     ? 'results'
     : ['RACING', 'COUNTDOWN', 'PAUSED', 'FINISHING'].includes(phase)
       ? mode === 'challenge'
         ? 'challenge'
-        : 'race'
+        : track === 'canyon'
+          ? 'canyon'
+          : track === 'coast'
+            ? 'coast'
+            : 'race'
       : 'menu';
 }
 export class IntensityState {

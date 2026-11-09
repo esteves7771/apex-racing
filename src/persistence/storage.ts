@@ -6,7 +6,7 @@ import type { Mode } from '../game/RaceStateMachine';
 import { GP_RULES_ID } from '../game/GrandPrix';
 import { difficulties, type Difficulty } from '../ai/RacingAI';
 export const gpRecordKey = (vehicle: VehicleId, difficulty: Difficulty, layout = activeLayoutId) =>
-  `${layout}/gp/${GP_RULES_ID}/${difficulty}/${vehicle}`;
+  `${layout}/gp/${layout.startsWith('canyon-carnival-') ? 'sprint-1' : GP_RULES_ID}/${difficulty}/${vehicle}`;
 export interface CupRecord {
   bestPosition: number;
   bestTime: number;
@@ -16,7 +16,7 @@ export interface CupRecord {
   history: { position: number; time: number; bestLap: number }[];
 }
 export const recordKey = (mode: Mode, vehicle: VehicleId, layout = activeLayoutId) =>
-  `${layout}/${mode}/${mode === 'challenge' ? CHALLENGE_LAYOUT : 'clean'}/${vehicle}`;
+  `${layout}/${mode}/${mode === 'challenge' ? CHALLENGE_LAYOUT : layout.startsWith('canyon-carnival-') ? 'sprint-clean' : 'clean'}/${vehicle}`;
 export const STORAGE_KEY = 'apex.v2';
 export interface Settings {
   color: string;
@@ -96,7 +96,7 @@ export function readSave(storage: Pick<Storage, 'getItem'> | undefined): Save {
       s = v.settings ?? {};
     if (vehiclePalette.includes(s.color)) result.settings.color = s.color;
     result.settings.vehicle = getVehicle(s.vehicle).id;
-    if (s.track === 'coast') result.settings.track = 'coast';
+    if (s.track === 'coast' || s.track === 'canyon') result.settings.track = s.track;
     if (typeof s.difficulty === 'string' && Object.hasOwn(difficulties, s.difficulty))
       result.settings.difficulty = s.difficulty as Difficulty;
     for (const id of ['sprinter', 'vortex', 'bolt'] as const)
@@ -132,7 +132,7 @@ export function readSave(storage: Pick<Storage, 'getItem'> | undefined): Save {
         key.length < 200 &&
         value &&
         typeof value === 'object' &&
-        /^(pine-|coral-coast-)/.test(key)
+        /^(pine-|coral-coast-|canyon-carnival-)/.test(key)
       ) {
         const r = value as RecordTimes;
         result.records[key] = { bestLap: validTime(r.bestLap), bestTotal: validTime(r.bestTotal) };
@@ -145,7 +145,7 @@ export function readSave(storage: Pick<Storage, 'getItem'> | undefined): Save {
       const r = value as CupRecord;
       if (
         !r ||
-        !/^(pine-|coral-coast-)/.test(key) ||
+        !/^(pine-|coral-coast-|canyon-carnival-)/.test(key) ||
         key.length > 200 ||
         !Number.isInteger(r.bestPosition) ||
         r.bestPosition < 1 ||

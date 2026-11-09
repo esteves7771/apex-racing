@@ -21,6 +21,12 @@ export const compositions = {
     roots: [48, 53, 45, 55],
     motif: [76, 79, 84, 83, 79, 76, 74, 79, 81, 84, 88, 84, 83, 79, 76, 74],
   },
+  // Redline Adventure: original E minor / funk-derived hook with a syncopated bass answer.
+  canyon: {
+    bpm: 130,
+    roots: [40, 45, 43, 47],
+    motif: [76, 79, 81, 83, 86, 83, 81, 79, 74, 76, 79, 83, 81, 78, 76, 74],
+  },
   challenge: {
     bpm: 132,
     roots: [50, 48, 46, 45],
@@ -56,7 +62,10 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
       const t = i / rate,
         env = Math.min(1, t / (kind === 'pad' ? 0.15 : 0.012)) * Math.min(1, (length - t) / 0.12),
         p = t * freq * Math.PI * 2;
-      const wave = Math.sin(p) + Math.sin(p * 2) * 0.22 + Math.sin(p * 3) * 0.08;
+      const wave =
+        name === 'canyon' && kind === 'lead'
+          ? Math.sin(p + Math.sin(p * 2) * Math.exp(-t * 8) * 1.4) + Math.sin(p * 0.5) * 0.14
+          : Math.sin(p) + Math.sin(p * 2) * 0.22 + Math.sin(p * 3) * 0.08;
       data[start + i] +=
         wave *
         volume *
@@ -80,7 +89,10 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
   for (let bar = 0; bar < 8; bar++) {
     const root = c.roots[Math.floor(bar / 2)],
       time = bar * 4 * beat;
-    const minor = root % 12 === 2 || root % 12 === 9;
+    const minor =
+      root % 12 === 2 ||
+      root % 12 === 9 ||
+      (name === 'canyon' && (root % 12 === 4 || root % 12 === 11));
     const chord = [0, minor ? 3 : 4, 7, minor || root % 12 === 0 ? 10 : 11];
     for (const interval of chord) note(a, time, beat * 3.95, root + 12 + interval, 0.023, 'pad');
     for (let j = 0; j < 8; j++) {
@@ -88,16 +100,17 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
         a,
         time + (j * beat) / 2,
         beat * 0.43,
-        (root < 45 ? root : root - 12) + (j === 6 ? 7 : 0),
+        (root < 45 ? root : root - 12) +
+          (name === 'canyon' ? [0, 0, 7, 0, 12, 7, 0, 10][j] : j === 6 ? 7 : 0),
         0.095,
         'bass',
       );
       note(
         a,
-        time + (j * beat) / 2,
-        beat * 0.65,
+        time + ((j + (name === 'canyon' && j % 2 ? 0.16 : 0)) * beat) / 2,
+        beat * (name === 'canyon' ? 0.42 : 0.65),
         c.motif[(bar * 4 + j) % 16],
-        name === 'menu' ? 0.047 : name === 'race' ? 0.043 : 0.053,
+        name === 'menu' ? 0.047 : name === 'race' ? 0.043 : name === 'canyon' ? 0.074 : 0.053,
         'lead',
       );
       drum(b, time + (j * beat) / 2, 'hat', 0.035);
@@ -111,6 +124,12 @@ export function compose(ctx: AudioContext, name: keyof typeof compositions): The
     else drum(a, time + beat * 2.5, 'kick', 0.16);
     drum(a, time + beat, 'snare', name === 'menu' ? 0.045 : name === 'race' ? 0.065 : 0.075);
     drum(a, time + beat * 3, 'snare', name === 'menu' ? 0.045 : name === 'race' ? 0.065 : 0.075);
+    if (name === 'canyon') {
+      drum(a, time + beat * 0.75, 'kick', 0.16);
+      drum(a, time + beat * 2.25, 'kick', 0.18);
+      for (const step of [0.25, 1.75, 2.75, 3.25])
+        note(b, time + step * beat, beat * 0.22, root + 31, 0.055, 'lead');
+    }
     drum(b, time + beat * 1.5, 'kick', 0.15);
     drum(b, time + beat * 3.5, 'snare', 0.08);
     note(b, time + beat * 2, beat * 1.8, root + 31, 0.038, 'lead');

@@ -4,7 +4,7 @@ import { startServer } from './server.mjs';
 const server = await startServer(5183);
 process.on('exit', () => server.kill());
 const browser = await chromium.launch({
-  executablePath: undefined,
+  executablePath: process.env.CHROME_PATH || undefined,
   headless: true,
 });
 try {
@@ -12,8 +12,8 @@ try {
   await page.goto('http://127.0.0.1:5183');
   await page.getByRole('button', { name: 'Drive Pine Valley' }).waitFor({ timeout: 60000 });
   await page.getByRole('button', { name: 'Drive Pine Valley' }).click();
-  await fs.mkdir('test-results/v071', { recursive: true });
-  for (const name of ['menu', 'race', 'coast', 'challenge']) {
+  await fs.mkdir('test-results/v08', { recursive: true });
+  for (const name of ['menu', 'race', 'coast', 'canyon', 'challenge']) {
     const bytes = await page.evaluate((name) => {
       const asset = window.apexDebug.audio.music.assets[name],
         a = asset.base.getChannelData(0),
@@ -48,9 +48,9 @@ try {
         binary += String.fromCharCode(...out.subarray(i, i + 16384));
       return btoa(binary);
     }, name);
-    await fs.writeFile(`test-results/v071/audio-${name}.wav`, Buffer.from(bytes, 'base64'));
+    await fs.writeFile(`test-results/v08/audio-${name}.wav`, Buffer.from(bytes, 'base64'));
   }
-  console.log('Exported four original soundtrack previews');
+  console.log('Exported five original soundtrack previews');
 } finally {
   await browser.close();
   server.kill();

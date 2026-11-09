@@ -14,6 +14,7 @@ export class MusicManager {
     this.assets = {
       menu: compose(ctx, 'menu'),
       coast: compose(ctx, 'coast'),
+      canyon: compose(ctx, 'canyon'),
       race: compose(ctx, 'race'),
       challenge: compose(ctx, 'challenge'),
     };
@@ -59,7 +60,11 @@ export class MusicManager {
       source.start(now + 0.025);
       return source;
     });
-    gain.gain.setTargetAtTime(theme === 'results' ? 0.55 : 0.8, now, 0.4);
+    gain.gain.setTargetAtTime(
+      theme === 'results' ? 0.55 : theme === 'canyon' ? 0.98 : 0.8,
+      now,
+      0.4,
+    );
     // Disconnect outgoing bus nodes once both finite stop events have arrived.
     let ended = 0;
     for (const s of sources)

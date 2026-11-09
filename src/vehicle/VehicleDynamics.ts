@@ -20,8 +20,17 @@ export function applyVehicleCommand(
   right: { x: number; z: number },
   vertical: number,
   dt = 1 / 60,
+  boost = 0,
 ) {
-  const next = driveStep(forward, lateral, input, offroad, dt, car.handling);
+  const handling =
+    boost > 0
+      ? {
+          ...car.handling,
+          maxSpeed: car.handling.maxSpeed * (1 + 0.2 * boost),
+          acceleration: car.handling.acceleration * (1 + 0.6 * boost),
+        }
+      : car.handling;
+  const next = driveStep(forward, lateral, input, offroad, dt, handling);
   if (grounded) {
     body.setLinvel(
       {

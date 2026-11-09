@@ -1,10 +1,17 @@
-# APEX v0.7.1 — Living Worlds playtest
+# APEX v0.8 — Canyon Carnival playtest
 
 **[Play APEX](https://esteves7771.github.io/apex-racing/)**
 
-A stylized 3D arcade racer with Pine Valley Circuit, Coral Coast Rush, three cars, a 3D garage, original procedural music and physical AI rivals.
+A stylized 3D arcade racer with Pine Valley Circuit, Coral Coast Rush, the new Canyon Carnival sprint, three cars, a 3D garage, original procedural music and physical AI rivals.
 
 ## This release
+
+- Canyon Carnival: a 5 km point-to-point adventure through seven canyon, mine, oasis and festival sections.
+- Four alternate routes, six optional jumps with bypasses, ten cyan boost pads and bounded breakable/solid hazards.
+- Sprint Time Trial, four-car Grand Prix Sprint and Free Drive; route-aware progression and separate vehicle records.
+- Fair route/boost/traffic-aware Canyon rivals and original 130 BPM Redline Adventure music.
+
+Retained from previous releases:
 
 - Premium desktop racing menu, richer original forest/coastal scenery and more competitive fair AI.
 - Recognizable fans/marshals, lightweight birds, slowly drifting faceted clouds and restrained chase-camera speed feedback.
@@ -18,7 +25,7 @@ A stylized 3D arcade racer with Pine Valley Circuit, Coral Coast Rush, three car
 - Improved physically fair racing lines, speed/braking planning and passing. No rubber-banding or extra vehicle grip/top speed.
 - Fixed intermittent Bolt body rendering and asynchronous shader resource ownership. Development CSS watcher waits for non-atomic writes to settle.
 
-Free Drive, three-lap Time Attack and four-car Grand Prix run on both circuits. Obstacle Challenge is on Pine Valley. Visit checkpoints in order; reset invalidates the timed lap. Audio begins after interaction. Settings offer graphics presets, steering response, reduced motion and independent audio volumes.
+Free Drive, three-lap Time Attack and four-car Grand Prix run on both circuits. Canyon Carnival uses a single point-to-point run with no laps. Obstacle Challenge is on Pine Valley. Visit checkpoints in order; reset invalidates the timed lap or sprint. Audio begins after interaction. Settings offer graphics presets, steering response, reduced motion and independent audio volumes.
 
 | Keyboard | Action |
 | --- | --- |
@@ -62,4 +69,4 @@ Records/preferences stay in this browser's localStorage. There is no game accoun
 
 APEX is proprietary. Copyright (c) 2026. All rights reserved. No open-source game license is granted. See COPYRIGHT.txt and THIRD_PARTY_NOTICES.txt; third-party software retains its own licenses.
 
-See PUBLISHING.md for approved release and rollback procedures. The previous public release is preserved by v0.6.1-public and v0.6.1-rollback-before-v071; older v0.5.1 tags remain intact.
+See PUBLISHING.md for approved release and rollback procedures. The previous public release is preserved by v0.7.1-public and v0.7.1-rollback-before-v08; all older release tags remain intact.

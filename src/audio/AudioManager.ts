@@ -1,4 +1,5 @@
-import { trackId, coast, nearestTrack } from '../track/ActiveTrack';
+import { projectRoute, tunnelAt as canyonTunnelAt } from '../track/CanyonCarnival';
+import { trackId, activeTrack, coast, nearestTrack } from '../track/ActiveTrack';
 import { RivalAudioController } from './RivalAudioController';
 import { race, telemetry, useGame } from '../game/store';
 import { getVehicle } from '../vehicle/VehicleRegistry';
@@ -30,6 +31,8 @@ export class AudioManager {
   lastRun = -1;
   lastJump = 0;
   lastLanding = 0;
+  lastBoost = 0;
+  lastBoostEnd = 0;
   lastMusicTime = 0;
   rivals?: RivalAudioController;
   lastCupPosition = 0;
@@ -90,6 +93,7 @@ export class AudioManager {
     const ctx = this.context,
       b = this.buses;
     if (!ctx || !b) return;
+    const isCanyon = trackId === 'canyon';
     const s = useGame.getState().save.settings,
       blocked = race.phase === 'PAUSED' || document.hidden || !this.focused;
     if (blocked || s.muted || s.master === 0) {
@@ -103,23 +107,36 @@ export class AudioManager {
     b.master.gain.setTargetAtTime(s.master, ctx.currentTime, 0.03);
     for (const [name, value] of [
       ['music', s.music],
-      ['vehicle', s.vehicleVolume],
+      ['vehicle', s.vehicleVolume * (isCanyon ? 0.82 : 1)],
       ['sfx', s.sfx],
       ['ambient', s.ambient],
     ] as const)
       b[name].gain.setTargetAtTime(value, ctx.currentTime, 0.05);
     const dt = Math.min(0.25, Math.max(0, ctx.currentTime - this.lastMusicTime));
     this.lastMusicTime = ctx.currentTime;
-    const theme = themeFor(race.phase === 'FINISHING' ? 'RESULTS' : race.phase, race.mode),
+    const theme = themeFor(race.phase === 'FINISHING' ? 'RESULTS' : race.phase, race.mode, trackId),
       isCoast = trackId === 'coast';
     this.music?.update(
-      isCoast && theme === 'race' ? 'coast' : theme,
+      theme,
       Math.abs(telemetry.speed),
       dt,
-      race.phase === 'RACING' && race.laps.length === 2,
+      race.phase === 'RACING' &&
+        (activeTrack.format === 'sprint'
+          ? telemetry.courseProgress > 0.85
+          : race.laps.length === 2),
     );
-    const t = isCoast ? nearestTrack(telemetry.x, telemetry.z).t : 0,
-      inTunnel = isCoast && !!coast.tunnelAt(t);
+    const t = isCanyon
+        ? telemetry.courseProgress
+        : isCoast
+          ? nearestTrack(telemetry.x, telemetry.z).t
+          : 0,
+      canyonNear = isCanyon
+        ? projectRoute(telemetry.x, telemetry.z, undefined, telemetry.courseRoute)
+        : undefined,
+      inTunnel =
+        (isCoast && !!coast.tunnelAt(t)) ||
+        (!!canyonNear && !!canyonTunnelAt(canyonNear.t, canyonNear.route));
+    const festival = isCanyon && (t < 0.12 || t > 0.88);
     this.environment = {
       tunnel: inTunnel,
       jungle: isCoast && t > 0.64 && t < 0.83,
@@ -133,35 +150,37 @@ export class AudioManager {
     }
     if (this.ambientFilter) {
       this.ambientFilter.frequency.setTargetAtTime(
-        isCoast
-          ? inTunnel
-            ? 320
-            : t > 0.64 && t < 0.83
-              ? 1800
-              : 950 + Math.sin(ctx.currentTime * 0.7) * 300
-          : 650,
+        isCanyon
+          ? t > 0.42 && t < 0.58
+            ? 2100
+            : 500 + Math.min(900, Math.abs(telemetry.speed) * 14)
+          : isCoast
+            ? inTunnel
+              ? 320
+              : t > 0.64 && t < 0.83
+                ? 1800
+                : 950 + Math.sin(ctx.currentTime * 0.7) * 300
+            : 650,
         ctx.currentTime,
         0.2,
       );
     }
     if (
-      isCoast &&
-      t > 0.64 &&
-      t < 0.83 &&
+      ((isCoast && t > 0.64 && t < 0.83) || festival) &&
       race.phase === 'RACING' &&
       !this.jungleVoice &&
-      ctx.currentTime - this.lastChirp > 4.5
+      ctx.currentTime - this.lastChirp > (festival ? 8 : 4.5)
     ) {
-      // One short original bird-like phrase; bounded and scheduled on the audio clock.
+      // One distant festival horn or bird phrase, bounded on the shared audio clock.
       const voice = ctx.createOscillator(),
         gain = ctx.createGain(),
         now = ctx.currentTime;
-      voice.type = 'sine';
-      voice.frequency.setValueAtTime(1150, now);
-      voice.frequency.exponentialRampToValueAtTime(1900, now + 0.07);
-      voice.frequency.exponentialRampToValueAtTime(980, now + 0.19);
+      voice.type = festival ? 'triangle' : 'sine';
+      voice.frequency.setValueAtTime(festival ? 330 : 1150, now);
+      voice.frequency.exponentialRampToValueAtTime(festival ? 440 : 1900, now + 0.07);
+      voice.frequency.exponentialRampToValueAtTime(festival ? 330 : 980, now + 0.19);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.025, now + 0.025);
+      gain.gain.linearRampToValueAtTime(festival ? 0.014 : 0.025, now + 0.025);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
       voice.connect(gain);
       gain.connect(b.ambient);
@@ -193,7 +212,23 @@ export class AudioManager {
       this.lastCount = 0;
       this.lastJump = telemetry.jumpCount;
       this.lastLanding = telemetry.landingSerial;
+      this.lastBoost = telemetry.boostSerial;
+      this.lastBoostEnd = telemetry.boostExpiredSerial;
     }
+    if (isCanyon && race.phase === 'RACING') {
+      // Reuse the ambient buffer/filter for canyon wind, waterfall wash and airborne rush.
+      const waterfall = t > 0.42 && t < 0.58;
+      b.ambient.gain.setTargetAtTime(
+        s.ambient *
+          (waterfall ? 1.5 : telemetry.airborne || telemetry.boostRemaining > 0 ? 1.25 : 0.85),
+        ctx.currentTime,
+        0.18,
+      );
+      if (this.lastBoost !== telemetry.boostSerial) this.play('boost');
+      if (this.lastBoostEnd !== telemetry.boostExpiredSerial) this.play('boostEnd', 0.55);
+    }
+    this.lastBoost = telemetry.boostSerial;
+    this.lastBoostEnd = telemetry.boostExpiredSerial;
     const cupActive =
       race.mode === 'gp' &&
       (['COUNTDOWN', 'RACING', 'FINISHING'].includes(race.phase) ||

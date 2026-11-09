@@ -1,8 +1,11 @@
+import './sprint.css';
+import { courseModeLabel, courseProgress, driveLabel } from './coursePresentation';
+import { branches as canyonBranches, routePose, sectionAt } from '../track/CanyonCarnival';
 import { useModalFocus } from './useModalFocus';
 import { racingLineAt } from '../ai/RacingLine';
 import { PremiumMenu } from './PremiumMenu';
 import { useTouchDevice } from '../input/device';
-import { trackId, selectTrack, tracks, type TrackId } from '../track/ActiveTrack';
+import { trackId, activeTrack, selectTrack, tracks, type TrackId } from '../track/ActiveTrack';
 import { useEffect, useState } from 'react';
 import { race, telemetry, useGame } from '../game/store';
 import { formatTime, type Mode } from '../game/RaceStateMachine';
@@ -44,6 +47,15 @@ function buildMinimap() {
   return {
     x,
     z,
+    branches:
+      activeTrack.format === 'sprint'
+        ? canyonBranches.map((b) =>
+            Array.from({ length: 31 }, (_, i) => {
+              const p = routePose(b.start + ((b.end - b.start) * i) / 30, b.id).p;
+              return `${x(p.x)},${z(p.z)}`;
+            }).join(' '),
+          )
+        : [],
     points: samples
       .filter((_, i) => i % 4 === 0)
       .map((s) => `${x(s.p.x)},${z(s.p.z)}`)
@@ -61,7 +73,7 @@ export function startRace(mode: Mode) {
   clearDrivingInput();
   unlockAudio();
   const settings = useGame.getState().save.settings;
-  if (mode === 'gp') racingLineAt(0, settings.difficulty);
+  if (mode === 'gp' && trackId !== 'canyon') racingLineAt(0, settings.difficulty);
   race.start(mode, { vehicle: settings.vehicle, difficulty: settings.difficulty });
   telemetry.resetSerial++;
   useGame.getState().publish();
@@ -190,8 +202,8 @@ function Settings() {
         </label>
       ))}
       <small>
-        Original APEX soundtrack · menu 104 / racing 164 / challenge 132 BPM. Audio starts after
-        interaction. All cues are optional.
+        Original themes: Forest Flow 116 / Lagoon Drive 124 / Redline Adventure 130 BPM. Audio
+        starts after interaction. All cues are optional.
       </small>
     </div>
   );
@@ -219,6 +231,8 @@ export function Interface() {
     setPanel(null);
     setCupSetup(false);
   });
+  const sprint = activeTrack.format === 'sprint',
+    progress = courseProgress(telemetry.courseProgress, TRACK_LENGTH);
   const phase = race.phase,
     active = ['COUNTDOWN', 'RACING', 'FINISHING', 'PAUSED'].includes(phase);
   const near = nearestTrack(telemetry.x, telemetry.z),
@@ -261,7 +275,7 @@ export function Interface() {
           APEX<span> / </span>
         </div>
         <span>APEX MOTOR CLUB</span>
-        <span className="version">LOCAL EDITION · 0.7.1</span>
+        <span className="version">LOCAL EDITION · 0.8.0</span>
       </header>
       {phase === 'MENU' && !touch && (
         <PremiumMenu
@@ -301,7 +315,9 @@ export function Interface() {
             <p>
               {trackId === 'pine'
                 ? 'A winding ribbon of asphalt. A forest of pines.'
-                : 'Cliffside curves. Crystal caverns. A turquoise horizon.'}
+                : trackId === 'coast'
+                  ? 'Cliffside curves. Crystal caverns. A turquoise horizon.'
+                  : 'Seven districts. Four route choices. Five kilometres of adventure.'}
               <br />
               And the next fraction of a second.
             </p>
@@ -315,7 +331,7 @@ export function Interface() {
                     useGame.getState().publish();
                   }}
                 >
-                  {trackId === 'pine' ? 'Drive Pine Valley' : 'Drive Coral Coast'} <span>↗</span>
+                  {driveLabel(trackId)} <span>↗</span>
                 </button>
                 <nav>
                   <button onClick={() => setPanel('garage')}>Garage</button>
@@ -344,10 +360,11 @@ export function Interface() {
                   aria-label="Confirm race setup"
                   onClick={() => (menuMode === 'gp' ? setCupSetup(true) : startRace(menuMode))}
                 >
-                  Start {modeDefinitions[menuMode].label} <span>CONFIRM →</span>
+                  Start {courseModeLabel(menuMode, sprint)} <span>CONFIRM →</span>
                 </button>
                 <button className="secondary" onClick={() => startRace('time')}>
-                  Time attack <span>3 LAPS →</span>
+                  {sprint ? 'Sprint Time Trial' : 'Time attack'}{' '}
+                  <span>{sprint ? 'ONE RUN →' : '3 LAPS →'}</span>
                 </button>
                 <button className="secondary" onClick={() => startRace('free')}>
                   Free drive <span>NO CLOCK →</span>
@@ -361,7 +378,13 @@ export function Interface() {
                 </button>
                 <button className="secondary cup-entry" onClick={() => setCupSetup(true)}>
                   Grand Prix{' '}
-                  <span>{trackId === 'pine' ? 'PINE VALLEY CUP →' : 'CORAL COAST CUP →'}</span>
+                  <span>
+                    {sprint
+                      ? 'CANYON SPRINT →'
+                      : trackId === 'pine'
+                        ? 'PINE VALLEY CUP →'
+                        : 'CORAL COAST CUP →'}
+                  </span>
                 </button>
                 <button className="text-button" onClick={() => setPanel('garage')}>
                   {vehicle.name} · Change car
@@ -372,14 +395,20 @@ export function Interface() {
               </>
             )}
             <div className="record">
-              {race.mode === 'challenge' ? 'CHALLENGE' : 'TIME ATTACK'} BEST ·{' '}
-              {vehicle.name.split(' ')[1]} <strong>{formatTime(records.bestTotal)}</strong>
+              {sprint
+                ? 'SPRINT TIME TRIAL'
+                : race.mode === 'challenge'
+                  ? 'CHALLENGE'
+                  : 'TIME ATTACK'}{' '}
+              BEST · {vehicle.name.split(' ')[1]} <strong>{formatTime(records.bestTotal)}</strong>
               <small>
                 {Object.keys(save.archives).length
                   ? 'Previous Pine Valley layout records preserved'
                   : race.mode === 'challenge'
                     ? '1 lap + penalties · stored on this device'
-                    : '3 clean laps · stored on this device'}
+                    : sprint
+                      ? '1 clean sprint · stored on this device'
+                      : '3 clean laps · stored on this device'}
               </small>
             </div>
           </main>
@@ -403,8 +432,11 @@ export function Interface() {
               style={{ width: 140, height: 140 }}
               aria-label="Track preview"
             >
+              {map.branches.map((points, i) => (
+                <polyline key={i} points={points} fill="none" stroke="#69ddd3" strokeWidth="2" />
+              ))}
               <polyline
-                points={mapPoints + ' ' + mapPoints.split(' ')[0]}
+                points={sprint ? mapPoints : mapPoints + ' ' + mapPoints.split(' ')[0]}
                 fill="none"
                 stroke="#f6d35e"
                 strokeWidth="3"
@@ -412,10 +444,18 @@ export function Interface() {
               />
             </svg>
             <span>
-              {trackId === 'pine' ? '01 / PINE VALLEY · EVOLUTION' : '02 / CORAL COAST RUSH'}
+              {sprint
+                ? '03 / CANYON CARNIVAL · SPRINT'
+                : trackId === 'pine'
+                  ? '01 / PINE VALLEY · EVOLUTION'
+                  : '02 / CORAL COAST RUSH'}
             </span>
             <strong>
-              {trackId === 'pine' ? 'The forest is calling.' : 'Follow the island rhythm.'}
+              {sprint
+                ? 'A new adventure at every turn.'
+                : trackId === 'pine'
+                  ? 'The forest is calling.'
+                  : 'Follow the island rhythm.'}
             </strong>
             <p>
               {(TRACK_LENGTH / 1000).toFixed(2)} km · {checkpoints.length} checkpoints ·{' '}
@@ -425,7 +465,9 @@ export function Interface() {
               {TRACK_INFO.difficulty} ·{' '}
               {trackId === 'pine'
                 ? 'banked sweep · optional Pine Leap'
-                : 'six districts · two tunnels · Lagoon Leap + bypass'}
+                : sprint
+                  ? 'seven districts · four routes · Eagle’s Leap'
+                  : 'six districts · two tunnels · Lagoon Leap + bypass'}
             </p>
             <span className="tag">
               {vehicle.name.toUpperCase()} / {vehicle.difficulty.toUpperCase()}
@@ -437,10 +479,12 @@ export function Interface() {
         <>
           <section className="timing glass">
             <div className="eyebrow">
-              {modeDefinitions[race.mode].label.toUpperCase()}{' '}
+              {courseModeLabel(race.mode, sprint).toUpperCase()}{' '}
               <b>
                 {race.mode !== 'free'
-                  ? `LAP ${Math.min(modeDefinitions[race.mode].laps, race.laps.length + 1)} / ${modeDefinitions[race.mode].laps}`
+                  ? sprint
+                    ? `${progress.percent}% COMPLETE`
+                    : `LAP ${Math.min(modeDefinitions[race.mode].laps, race.laps.length + 1)} / ${modeDefinitions[race.mode].laps}`
                   : TRACK_INFO.name.toUpperCase()}
               </b>
             </div>
@@ -462,25 +506,50 @@ export function Interface() {
                       : (race.finishTime ?? race.elapsed - race.lapStart),
                   )}
             </strong>
-            <div className="time-row">
-              <span>LAST</span>
-              <b>{formatTime(race.laps.at(-1) ?? null)}</b>
-            </div>
-            <div className="time-row">
-              <span>BEST</span>
-              <b>
-                {formatTime(
-                  Math.min(records.bestLap ?? Infinity, ...race.laps) === Infinity
-                    ? null
-                    : Math.min(records.bestLap ?? Infinity, ...race.laps),
-                )}
-              </b>
-            </div>
+            {sprint ? (
+              <div className="sprint-progress">
+                <progress max={1} value={progress.fraction} aria-label="Sprint progress" />
+                <div className="time-row">
+                  <span>DISTANCE REMAINING</span>
+                  <b>{progress.remaining.toLocaleString()} m</b>
+                </div>
+                <small className="sprint-section">{sectionAt(progress.fraction).name}</small>
+              </div>
+            ) : (
+              <>
+                <div className="time-row">
+                  <span>LAST</span>
+                  <b>{formatTime(race.laps.at(-1) ?? null)}</b>
+                </div>
+                <div className="time-row">
+                  <span>BEST</span>
+                  <b>
+                    {formatTime(
+                      Math.min(records.bestLap ?? Infinity, ...race.laps) === Infinity
+                        ? null
+                        : Math.min(records.bestLap ?? Infinity, ...race.laps),
+                    )}
+                  </b>
+                </div>
+              </>
+            )}
             <div className={race.invalid ? 'status invalid' : 'status'}>
               {race.invalid
-                ? '● LAP INVALID'
-                : `● ${race.mode === 'free' ? 'EXPLORE THE CIRCUIT' : `CHECKPOINT ${race.nextGate === 0 ? checkpoints.length : race.nextGate} / ${checkpoints.length}`}`}
+                ? sprint
+                  ? '● RUN INVALID'
+                  : '● LAP INVALID'
+                : `● ${race.mode === 'free' ? (sprint ? 'EXPLORE THE CANYON' : 'EXPLORE THE CIRCUIT') : `CHECKPOINT ${race.nextGate === 0 ? checkpoints.length : race.nextGate} / ${checkpoints.length}`}`}
             </div>
+            {sprint && (
+              <div
+                className={telemetry.boostRemaining > 0 ? 'boost-status boosting' : 'boost-status'}
+              >
+                <span aria-live="polite">
+                  {telemetry.boostRemaining > 0 ? 'BOOST ACTIVE' : 'CYAN PADS · BOOST READY'}
+                </span>
+                {telemetry.boostRemaining > 0 && ` · ${telemetry.boostRemaining.toFixed(1)}s`}
+              </div>
+            )}
             {race.message && <small>{race.message}</small>}
             {race.hitMessage && <small aria-live="polite">{race.hitMessage}</small>}
             {race.mode === 'gp' && race.gp.positionMessage && (
@@ -513,15 +582,23 @@ export function Interface() {
             Ⅱ
           </button>
           <div className="minimap glass">
-            <svg viewBox="0 0 180 190" aria-label="Circuit minimap">
+            <svg viewBox="0 0 180 190" aria-label={sprint ? 'Sprint minimap' : 'Circuit minimap'}>
+              {map.branches.map((points, i) => (
+                <polyline key={i} points={points} fill="none" stroke="#69ddd3" strokeWidth="2" />
+              ))}
               <polyline
-                points={mapPoints + ' ' + mapPoints.split(' ')[0]}
+                points={sprint ? mapPoints : mapPoints + ' ' + mapPoints.split(' ')[0]}
                 fill="none"
                 stroke="#b9d6c6"
                 strokeWidth="6"
                 strokeLinejoin="round"
               />
-              <circle cx={map.x(leap.x)} cy={map.z(leap.z)} r="4" fill="#f08062" />
+              <circle
+                cx={map.x(sprint ? samples.at(-1)!.p.x : leap.x)}
+                cy={map.z(sprint ? samples.at(-1)!.p.z : leap.z)}
+                r="4"
+                fill={sprint ? '#66e7dc' : '#f08062'}
+              />
               <circle cx={map.x(telemetry.x)} cy={map.z(telemetry.z)} r="4.5" fill="#f6d35e" />
               {race.mode === 'gp' &&
                 race.gp.racers
@@ -639,15 +716,21 @@ export function Interface() {
         <div className="scrim">
           <section className="dialog results" data-record={race.newRecord}>
             <div className="eyebrow">
-              {trackId === 'pine' ? 'PINE VALLEY CUP' : 'CORAL COAST CUP'} ·{' '}
-              {difficulties[race.gp.difficulty].label.toUpperCase()}
+              {sprint
+                ? 'CANYON GRAND PRIX SPRINT'
+                : trackId === 'pine'
+                  ? 'PINE VALLEY CUP'
+                  : 'CORAL COAST CUP'}{' '}
+              · {difficulties[race.gp.difficulty].label.toUpperCase()}
             </div>
             <h2>
               {race.gp.position === 1
                 ? 'Cup champion.'
                 : race.gp.position <= 3
                   ? 'On the podium.'
-                  : 'Every lap counts.'}
+                  : sprint
+                    ? 'Every corner counts.'
+                    : 'Every lap counts.'}
             </h2>
             <strong className="result-time">
               P{race.gp.position}{' '}
@@ -676,7 +759,11 @@ export function Interface() {
                 </li>
               ))}
             </ol>
-            <p>Your best lap {formatTime(Math.min(...race.laps))}</p>
+            <p>
+              {sprint
+                ? `Your sprint ${formatTime(race.finishTime)}`
+                : `Your best lap ${formatTime(Math.min(...race.laps))}`}
+            </p>
             <small>Official shared-clock times · unfinished rivals are not assigned times.</small>
             <button className="primary" onClick={() => startRace('gp')}>
               Race again ↻
@@ -695,11 +782,13 @@ export function Interface() {
                 ? 'A NEW PERSONAL BEST'
                 : race.mode === 'challenge'
                   ? 'CHALLENGE COMPLETE'
-                  : 'THREE CLEAN LAPS'}
+                  : sprint
+                    ? 'SPRINT COMPLETE'
+                    : 'THREE CLEAN LAPS'}
             </div>
             <h2>{race.mode === 'challenge' ? 'Precision pays.' : 'Chasing fractions.'}</h2>
             <small>
-              {vehicle.name} · {modeDefinitions[race.mode].label}
+              {vehicle.name} · {courseModeLabel(race.mode, sprint)}
               {race.mode === 'challenge' ? ' · ADJUSTED TIME' : ''}
             </small>
             <strong className="result-time">{formatTime(race.adjustedTime)}</strong>
@@ -724,16 +813,21 @@ export function Interface() {
                 </p>
               </>
             )}
-            {race.laps.map((t, i) => (
-              <div className="time-row" key={i}>
-                <span>
-                  LAP 0{i + 1}
-                  {t === Math.min(...race.laps) ? ' · BEST' : ''}
-                </span>
-                <b>{formatTime(t)}</b>
-              </div>
-            ))}
-            <p>Best lap {formatTime(records.bestLap)}</p>
+            {!sprint &&
+              race.laps.map((t, i) => (
+                <div className="time-row" key={i}>
+                  <span>
+                    LAP 0{i + 1}
+                    {t === Math.min(...race.laps) ? ' · BEST' : ''}
+                  </span>
+                  <b>{formatTime(t)}</b>
+                </div>
+              ))}
+            <p>
+              {sprint
+                ? `Personal best ${formatTime(records.bestTotal)}`
+                : `Best lap ${formatTime(records.bestLap)}`}
+            </p>
             {race.improvement !== null && race.improvement > 0 && (
               <p className="record-gain">
                 ✦ {formatTime(race.improvement)} faster than your previous run
@@ -787,7 +881,11 @@ export function Interface() {
           >
             <div className="eyebrow">GRAND PRIX / {TRACK_INFO.name.toUpperCase()}</div>
             <h2>Meet your rivals.</h2>
-            <p>3 laps · 4 physical cars · clean circuit · no catch-up boosts</p>
+            <p>
+              {sprint
+                ? 'One 5 km sprint · four physical cars · shared boost pads · no catch-up advantages'
+                : '3 laps · 4 physical cars · clean circuit · no catch-up boosts'}
+            </p>
             <p>
               You: <b>{vehicle.name}</b> · Grid 4
             </p>

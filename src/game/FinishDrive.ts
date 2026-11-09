@@ -1,6 +1,6 @@
 // Bounded road-following cooldown using the ordinary car controller and braking limits.
 import { navAt, angle, clamp } from '../ai/TrackNavigation';
-import { nearestTrack, TRACK_LENGTH } from '../track/ActiveTrack';
+import { nearestTrack, TRACK_LENGTH, trackId, canyon } from '../track/ActiveTrack';
 import type { DriveCommand } from '../vehicle/VehicleDynamics';
 export function finishCommand(
   x: number,
@@ -11,7 +11,11 @@ export function finishCommand(
 ): DriveCommand {
   const near = nearestTrack(x, z),
     lookahead = Math.max(8, Math.abs(speed) * 0.65);
-  const target = navAt(near.t + lookahead / TRACK_LENGTH, 1.8);
+  const cp =
+    trackId === 'canyon' ? canyon.routePose(near.t + lookahead / TRACK_LENGTH, 'main', 1.8) : null;
+  const target = cp
+    ? { x: cp.p.x, z: cp.p.z, curvature: 0 }
+    : navAt(near.t + lookahead / TRACK_LENGTH, 1.8);
   const error = angle(Math.atan2(-(target.x - x), -(target.z - z)) - yaw);
   const desired = Math.min(
     Math.max(4, 18 - elapsed * 3),

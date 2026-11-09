@@ -7,16 +7,28 @@ const probes = [
   [0, 0.7],
   [0, -0.7],
 ] as const;
+const canyonProbes = [
+  [0, 0],
+  [1.55, 0],
+  [-1.55, 0],
+  [0, 0.78],
+  [0, -0.78],
+  [1.55, 0.78],
+  [1.55, -0.78],
+  [-1.55, 0.78],
+  [-1.55, -0.78],
+] as const;
 export function probeGround(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
   forward: { x: number; z: number },
   right: { x: number; z: number },
+  profile: 'default' | 'canyon' = 'default',
 ) {
   const p = body.translation();
   let distance = Infinity,
     normal = { x: 0, y: 1, z: 0 };
-  for (const [long, side] of probes) {
+  for (const [long, side] of profile === 'canyon' ? canyonProbes : probes) {
     const hit = world.castRayAndGetNormal(
       new RAPIER.Ray(
         {
